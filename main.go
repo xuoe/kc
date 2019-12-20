@@ -981,9 +981,10 @@ func (inv *invocation) fconfirm(w io.Writer, yn byte, text string) bool {
 	default:
 		panicf(`confirm: invalid default value: %q. Must be one of "yYnN".`, yn)
 	}
-	// if isDevice(w) || isDevice(inv.stdin) {
-	// 	return true
-	// }
+	// Auto-confirm if stdin is not interactive.
+	if !isInteractive(inv.stdin) {
+		return true
+	}
 RETRY:
 	inv.printf(w, "%s %s ", text, suffix)
 	switch inv.readByte() {

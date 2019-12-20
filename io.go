@@ -22,11 +22,13 @@ func isTerminal(stream interface{}) bool {
 	return terminal.IsTerminal(int(f.Fd()))
 }
 
-func isDevice(stream interface{}) bool {
-	if _, ok := stream.(*os.File); ok {
-		return !isTerminal(stream)
+func isInteractive(stream interface{}) bool {
+	f, ok := stream.(*os.File)
+	if !ok {
+		// Likely a buffer used during tests.
+		return true
 	}
-	return false
+	return terminal.IsTerminal(int(f.Fd()))
 }
 
 type screen interface {
