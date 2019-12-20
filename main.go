@@ -886,7 +886,7 @@ RETRY:
 		inv.printf(scr, "  %s\n", s)
 	}
 	inv.printf(scr, "\n")
-	pat = inv.fpromptf(scr, "Press [Enter] to %s the above or apply a different pattern: ", act)
+	pat = inv.fpromptf(scr, "Press [Return] to %s the above or apply a different pattern: ", act)
 	if pat != "" {
 		scr.clear()
 		goto RETRY
