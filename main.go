@@ -236,46 +236,36 @@ func panicf(fs string, args ...interface{}) {
 func (inv *invocation) doHelp() error {
 	tmpl := fmt.Sprintf("kc %s\n", Version) + `
 Usage:
-    kc [OPTIONS] [-COMMAND]
+    kc [OPTIONS] <COMMAND> [ARGS]
     kc [LABEL] [TEXT]
 
-    In the first form, COMMAND is a flag listed in the "Commands" section
-    below. Commands must come after any option.
-
-    In the second form, kc attempts to insert a change into the "Unreleased"
-    section of the current changelog. LABEL is ignored if the runtime config
-    contains an empty array of change labels (see --dump conf); otherwise
-    it must match at most one of the configured change labels. TEXT is the actual
-    change text and is merged with LABEL when no change labels are configured.
-    Omitting TEXT opens a text editor to capture the change text.
-
 Options:
-    -c, --changelog <PATH>  Skip changelog auto-detection and load the one found PATH.
-    -C, --config <PATH>     Skip config auto-detection and, in addition to loading the
-                            builtin config, try to load the one found at PATH.
+    -c, --changelog <PATH>  Load the changelog found at PATH instead of auto-detecting it.
+    -C, --config <PATH>     Load the config found at PATH instead of auto-detecting it.
 
 Commands:
-    -i, --init [FILETYPE] [TEMPLATE]  Initialize a config or changelog file.
-    -p, --dump [FILETYPE] [PROP]      Print details about a config or changelog file.
+    -i, --init [FILE] [TEMPLATE]      Initialize a config or changelog file.
+    -p, --dump [FILE] [PROP]          Print FILE details.
     -s, --show [PATTERN]              Show the "Unreleased" section or releases that match PATTERN.
     -e, --edit [PATTERN]              Like --show, but edit instead.
     -d, --delete [PATTERN]            Like --show, but delete instead.
     -l, --list [PATTERN]              List all releases or those that match PATTERN.
-    -L, --list-all [PATTERN]          Like --list, but also include the "Unreleased"
-                                      section and the number of changes per release.
+    -L, --list-all [PATTERN]          Like --list, but include the "Unreleased" section.
     -r, --release [VERSION]           Release the "Unreleased" section.
-        --sort                        Sort releases according to semver semantics.
+    -S, --sort                        Sort releases according to semver.
 
 Flags:
     -h, --help     Print this message.
     -v, --version  Print version information.
 
 Arguments:
-    FILETYPE    One of "changelog", "config", or a prefix thereof
-    TEMPLATE    A template name (discoverable via --dump)
-    PROP        One of "path", "file", "templates", or a prefix thereof
-    PATTERN     An exact version string, a version string prefix or a glob pattern
-    VERSION     A version string that adheres to semver, or one of "patch", "minor", "major"
+    FILE      One of "changelog" or "config"
+    TEMPLATE  A template name (discoverable via --dump)
+    PROP      One of "path", "file" or "templates"
+    PATTERN   An exact version string, a version string prefix or a glob pattern
+    VERSION   A version string that adheres to semver, or one of "patch", "minor", "major"
+
+    Note that all arguments may be specified as prefixes, e.g., "p" or "pa" instead of "patch" or "path".
 	`
 	inv.errln(strings.TrimSpace(tmpl))
 	return nil
