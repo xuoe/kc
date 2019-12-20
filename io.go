@@ -140,7 +140,7 @@ LOOP:
 		case b == 0:
 			panic(ioError{errors.New("NUL cursor position")})
 		case b == 0x1b, b == '[':
-			break // switch
+			// skip
 		case b == ';':
 			split = true
 		case b == 'R':
