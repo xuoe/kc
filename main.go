@@ -996,10 +996,6 @@ RETRY:
 	}
 }
 
-func (inv *invocation) outf(fs string, args ...interface{}) {
-	inv.printf(inv.stdout, fs, args...)
-}
-
 func (inv *invocation) outln(s string) {
 	inv.println(inv.stdout, s)
 }
