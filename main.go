@@ -923,8 +923,6 @@ RETRY:
 	case choice == "" && def == "":
 		scr.clear()
 		goto RETRY
-	case choice == "" && def != "":
-		choice = def
 	default:
 		for _, c := range choices {
 			if strings.HasPrefix(choice, c.name) {
