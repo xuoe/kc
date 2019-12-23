@@ -193,6 +193,22 @@ func TestChangelog(t *testing.T) {
 			Line 4: invalid version string: "Test"`,
 		},
 		{
+			name: "version strings with multiple digits",
+			in: `# Changelog
+			## 10.0.0
+			## 123.91.0
+			## 0.0.100
+			`,
+			out: `# Changelog
+
+			## 10.0.0
+
+			## 123.91.0
+
+			## 0.0.100
+			`,
+		},
+		{
 			name: "release spacing",
 			in: `# Changelog
 			## Unreleased

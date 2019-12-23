@@ -405,7 +405,7 @@ func (rel *release) details() string {
 var (
 	reVersion     = regexp.MustCompile(`(\d+)\.(\d+)\.(\d+)\S*?`)
 	reUnreleased  = regexp.MustCompile(`(?i:^\s*\[?unreleased\]?$)`)
-	reRelease     = regexp.MustCompile(`^\s*\[?(\d\.\d\.\d\S*?)\]?(?:\s+-\s+(\d{4}[-\./]\d{2}[-\./]\d{2}))?$`)
+	reRelease     = regexp.MustCompile(`^\s*\[?(\d+\.\d+\.\d+\S*?)\]?(?:\s+-\s+(\d{4}[-\./]\d{2}[-\./]\d{2}))?$`)
 	reReleaseLink = regexp.MustCompile(`^\[([[:word:].-]+)\]:\s*(\S+)`)
 )
 
