@@ -271,7 +271,7 @@ Arguments:
 	return nil
 }
 
-var Version = "dev"
+const Version = "dev"
 
 func (inv *invocation) doVersion() error {
 	inv.outln(Version)
