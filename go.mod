@@ -1,6 +1,6 @@
 module github.com/xuoe/kc
 
-go 1.13
+go 1.12
 
 require (
 	github.com/pelletier/go-toml v1.6.0
