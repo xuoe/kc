@@ -947,7 +947,7 @@ func (m templates) dump(w io.Writer, names ...string) error {
 		b.Reset()
 		sep := strings.Repeat("-", len(name)+4)
 		fmt.Fprintln(b, sep)
-		fmt.Fprintln(b, fmt.Sprintf("| %s |", name))
+		fmt.Fprintf(b, "| %s |\n", name)
 		fmt.Fprintln(b, sep)
 		fmt.Fprintln(b, tmpl)
 		if _, err := io.WriteString(w, b.String()); err != nil {

@@ -920,7 +920,6 @@ RETRY:
 		scr.clear()
 		goto RETRY
 	}
-	panic("unreachable")
 }
 
 func (inv *invocation) promptChoice(title string, def string) (res string) {
