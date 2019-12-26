@@ -1,0 +1,349 @@
+# kc(1)
+:man manual: kc Manual
+:man source: kc {version}
+:page-layout: base
+
+== Name
+
+kc - a tool for managing changelogs
+
+== Synopsis
+
+[verse]
+*kc* [_OPTION_]... _COMMAND_ [ARGS]...
+*kc* [_OPTION_]... [_LABEL_] [_TEXT_]...
+
+== Description
+
+*kc* provides an interface for managing changelog files based on the
+https://keepachangelog.com/en/1.0.0/["Keep a Changelog" format].
+
+In addition to appending changes to a changelog, *kc* can create, edit, merge
+and delete releases. Depending on how it is configured, *kc* can generate links
+for @-style mentions and release links that point to the changes introduced by
+each release.
+
+As specified in the <<Synopsis>> section, there are two modes of invoking *kc*:
+
+* In the first form, *kc* executes a command on the current changelog file (see
+<<Files>> and <<Options>>). The commands are regular flags and are listed under
+the <<Commands>> section.
+* In the second form, *kc* appends a change under the _Unreleased_ section,
+which is auto-created if non-existent. _LABEL_ specifies the label or
+category under which the change text must be included. _TEXT_ is the actual
+change text, which, if omitted, instructs *kc* to open an editor (see
+<<Environment>>) to capture the change. If *kc* is configured to ignore change
+labels (see <<Configuration>>), _LABEL_ becomes part of _TEXT_.
+
+*kc* operates by stashing changes in an _Unreleased_ section. When a new
+release is created, the stashed changes are moved into it and the _Unreleased_
+section is removed. At this point, adding a new change restarts the cycle.
+
+Change text may span multiple lines and may be indented. However, *kc* discards
+any form of indentation and joins multiple lines by a double-space character
+sequence.
+
+Releases (or the _Unreleased_ section) may start with an introductory text,
+which can contain any text as long as it does not start with a release
+heading (*+##+*), change label heading (*+###+*), or change text (*+-+* ...).
+In those cases, prepending a space character to the text instructs *kc* to
+treat the special characters as plain text. Note that, besides manually editing
+the changelog file, the only way of adding a release note is by invoking
+*--edit*.
+
+== Options
+*-c, --changelog* _PATH_::
+
+Load the changelog file found at _PATH_ instead of searching for a changelog
+up the directory tree.
+
+*-C, --config* _PATH_::
+
+Load the configuration file found at _PATH_ instead of searching for a configuration
+file up the directory tree.
+
+== Commands
+
+Commands are regular flags, except that only one command may be specified at
+a time and it should always follow any of the options defined in the
+<<Options>> section.
+
+Most command arguments may be specified as case-insensitive prefixes.
+
+*-i, --init* [_FILE_] [_TEMPLATE_]::
+
+Initialize a changelog or configuration file using _TEMPLATE_ as the starting point.
+_FILE_ may be one of *config* or *changelog* (default).
++
+If _TEMPLATE_ is omitted, *kc* attempts to use the *default* template for
+_FILE_.
++
+If _FILE_ is *changelog* and the option *--changelog* is provided, a changelog
+file is initialized at the specified path. The same applies for configuration
+files and *--config*.
++
+Some templates may prompt the user for additional details (e.g., changelog title).
+To see the list of supported templates for _FILE_, issue `kc --dump FILE
+templates`.
+
+*-p, --dump* [_FILE_] [_PROP_]::
+Print changelog or configuration file details.
++
+_FILE_ may be one of *config* or *changelog* (default).
++
+_PROP_ may be one of:
++
+{empty}:::
++
+*file* (default):::: Print the raw file content as interpreted by *kc*.
+*path*:::: Print the file path as detected by *kc*.
+*templates*:::: Print the list of templates supported by _FILE_.
+
+*-s, --show* [_PATTERN_]::
+
+Show releases that match _PATTERN_, or show the _Unreleased_ section if
+_PATTERN_ is omitted.
++
+_PATTERN_ is a prefix and/or a glob pattern that is matched against release
+version strings. Other commands that take a _PATTERN_ expect the same format.
+
+*-d, --delete* [_PATTERN_]::
+
+Delete releases that match _PATTERN_, or delete the _Unreleased_ section if
+_PATTERN_ is omitted.
+
+*-l, --list* [_PATTERN_]::
+
+List release version strings that match _PATTERN_, or list all of them if
+_PATTERN_ is omitted.
+
+*-L, --list-all* [_PATTERN_]::
+
+Like *--list*, but also include the _Unreleased_ section and the number of
+changes per release/section.
+
+*-e, --edit* [_PATTERN_]::
+
+Edit releases that match _PATTERN_, or edit the _Unreleased_ section if
+_PATTERN_ is omitted. Editing is done by opening a text editor with the release
+content (version, note and changes) of each matching release, one by one.
+
+*-r, --release* [_VERSION_]::
+
+Release changes stashed under the _Unreleased_ section.
++
+_VERSION_ may be one of:
++
+{empty}:::
++
+*major*:::: Increment the major ``++(#._._)++`` number.
+*minor*:::: Increment the minor ``++(_.#._)++`` number.
+*patch*:::: Increment the patch ``++(_._.#)++`` number (default).
+_string_::::
+    A version string that adheres to Semantic Versioning.
+    If _VERSION_ matches an existing release, *kc* attempts to merge the
+    changes from the _Unreleased_ section with the release specified by
+    _VERSION_.
+
+*--sort*::
+
+Sort releases according to semver.
+
+== Configuration
+
+*kc* may be configured through a https://github.com/toml-lang/toml#readme[TOML]
+configuration file (see <<Files>> and <<Examples>>). The file is composed of
+two tables: `changes` and `links`.
+
+Use `kc --dump config` to inspect the active configuration settings, and `kc
+--dump config path` to inspect the configuration file path.
+
+=== *changes*
+A single-key table, where the key is `labels`: an array that specifies which
+change labels may be used when introducing a new change. If the array is
+non-empty, *kc* allows only changes whose labels match at most one of the array
+members. Otherwise, if the array is empty (not unset, just empty), *kc* ignores
+change labels and treats them as change text instead. By default,
+`changes.labels` is set to an array comprising of: *Added*, *Removed*,
+*Changed*, *Security*, *Fixed*, *Deprecated*. Note that, as mentioned in the
+preamble of the <<Commands>> section, when introducing a change, the label may
+be specified as a case-insensitive prefix, i.e., a label of `a`, `add` or `ADD`
+is equivalent to *Added*.
+
+=== *links*
+A multi-key table, where each key specifies the format for a link type. If
+a link type does not have a format defined, no links are generated for that
+particular type.
+
+{empty}::
+*unreleased*:::
+The format for the _Unreleased_ section link.
+{zwsp} +
+Placeholders: *{CURRENT}*.
+
+*initial-release*:::
+The format for the initial release (the bottom-most release) link.
+{zwsp} +
+Placeholders: *{CURRENT}*.
+
+*release*:::
+The format for intermediary release (any non-initial release) links.
+{zwsp} +
+Placeholders: *{CURRENT}*, *{PREVIOUS}*.
+
+*mention*:::
+The format for @-style mention links.
+{zwsp} +
+Placeholders: *{MENTION}*.
+
+==== Placeholders
+
+{empty}::
+
+*{CURRENT}*::: The version string for the current release.
+*{PREVIOUS}*::: The version string for the previous release.
+*{MENTION}*::: The part after the at symbol in an @-style mention.
+
+== Environment
+
+*kc* consults the `VISUAL` and `EDITOR` environment variables to determine
+which text editor to use when editing a release. If neither is set, *kc*
+prompts the user to specify an executable name instead.
+
+== Files
+
+*.kcrc*::
+The default configuration file. At runtime, *kc* attempts to load it from
+the working directory. If no configuration file exists, *kc* walks up the
+directory tree until a configuration file is found or the directory tree is
+exhausted. (The user's configuration directory is not consulted.)
++
+*kc* always loads a default internal configuration prior to loading
+a user-specified configuration file.
+
+*CHANGELOG.md*::
+The default changelog file. The loading process is the same as for the
+configuration file.
++
+The filename is case-insensitive and may also be one of: `RELEASE.md`,
+`RELEASES.md`, `RELEASE-NOTES.md`, `RELEASE_NOTES.md`, `RELEASENOTES.md`, or
+`NEWS.md`.
+
+== Notes
+
+*kc* does not require nor use *git*.
+
+== Examples
+
+Initialize and inspect a changelog file:
+
+----
+$ kc --init
+Title [Changelog]: <RETURN>
+$ kc --dump
+# Changelog
+
+## Unreleased
+$ kc --dump changelog path
+CHANGELOG.md
+----
+
+Initialize and inspect a configuration file:
+
+----
+$ kc --init conf github
+Repository [user/repository]: xuoe/kc<RETURN>
+$ kc --dump conf path
+.kcrc
+$ kc --dump conf
+[links]
+  initial-release = "https://github.com/xuoe/kc/releases/tag/{CURRENT}"
+  mention = "https://github.com/{MENTION}"
+  release = "https://github.com/xuoe/kc/compare/{PREVIOUS}...{CURRENT}"
+  unreleased = "https://github.com/xuoe/kc/compare/{PREVIOUS}...HEAD"
+
+[changes]
+  labels = [
+    "Added",
+    "Removed",
+    "Changed",
+    "Security",
+    "Fixed",
+    "Deprecated",
+  ]
+----
+
+Create a changelog, append a change, release changes:
+
+----
+$ kc --init
+Title [Changelog]: <RETURN>
+$ kc a This is an example change.
+$ kc --dump
+# Changelog
+
+## Unreleased
+
+### Added
+
+- This is an example change.
+$ kc --release min
+0.1.0
+$ kc --dump
+# Changelog
+
+## 0.1.0 - 2019-12-20
+
+### Added
+
+- This is an example change.
+----
+
+Delete releases:
+
+----
+$ kc --list
+0.3.0
+0.2.2
+0.2.1
+0.2.0
+0.1.1
+0.1.0
+$ kc --delete 0.1
+Releases [2/6]:
+
+  0.1.1
+  0.1.0
+
+Press [Return] to delete the above or apply a different pattern: <RETURN>
+Are you sure you want to delete 2 releases? [yN] y
+$ kc --list
+0.3.0
+0.2.2
+0.2.1
+0.2.0
+----
+
+Print the path to the active changelog:
+
+----
+$ touch CHANGELOG.md
+$ mkdir -p a/b/c; cd a/b/c
+$ kc --dump changelog path
+../../../CHANGELOG.md
+----
+
+Print the contents of the active changelog:
+
+----
+$ kc --init
+Title [Changelog]: <RETURN>
+$ kc --dump changelog # or just kc --dump
+# Changelog
+
+## Unreleased
+----
+
+== License
+
+*kc* is licensed under the link:./LICENSE.md[MIT license].
