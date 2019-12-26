@@ -1,3 +1,6 @@
+![CI Status](https://img.shields.io/github/workflow/status/xuoe/kc/CI?style=flat-square)
+![Latest Release](https://img.shields.io/github/v/release/xuoe/kc?style=flat-square)
+
 # kc
 
 __kc__ is a CLI utility that interfaces with changelogs that follow the [Keep
