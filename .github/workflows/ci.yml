@@ -5,6 +5,9 @@ on:
       - master
       - next
 
+env:
+  CI: true
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}

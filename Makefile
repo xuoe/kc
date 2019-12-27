@@ -2,21 +2,28 @@ BIN          := kc
 PLATFORM_BIN  = $(BIN)$(if $(findstring windows,$(1)),.exe)
 ARCH          = $(shell go env GOARCH)
 OS            = $(shell go env GOOS)
-ARCH_LIST    ?= 386 amd64
-OS_LIST      ?= linux openbsd freebsd netbsd darwin windows
-PLATFORMS     = $(foreach os,$(OS_LIST),$(foreach arch,$(ARCH_LIST),$(os)-$(arch)))
-BRANCH        = $(shell git rev-parse --abbrev-ref HEAD)
-VERSION       = $(shell $(call get-version))
-VERSION_FILE := version.go
-PREFIX       := /usr/local
+ARCHLIST     ?= x86 x64
+OSLIST       ?= linux openbsd freebsd netbsd macos windows
+PLATFORMS    := $(foreach os,$(OSLIST),$(foreach arch,$(ARCHLIST),$(os)-$(arch)))
+BRANCH       := $(shell git rev-parse --abbrev-ref HEAD)
+COMMIT       := $(shell git rev-parse --short HEAD)
+TODAY        := $(shell date '+%Y-%m-%d')
+PREFIX       ?= /usr/local
 BINDIR       := $(PREFIX)/bin
 MANDIR       := $(PREFIX)/share/man
-MAN_ROFF      = docs/MANUAL.roff
-MAN_ADOC      = docs/MANUAL.adoc
-LICENSE       = docs/LICENSE.md
-CHANGELOG     = docs/CHANGELOG.md
-DOCS          = $(MAN_ADOC) $(CHANGELOG) $(LICENSE)
+MANROFF      := docs/MANUAL.roff
+MANADOC      := docs/MANUAL.adoc
+LICENSE      := docs/LICENSE.md
+CHANGELOG    := docs/CHANGELOG.md
+DOCS         := $(MANADOC) $(CHANGELOG) $(LICENSE)
+BASH         := $(shell which bash)
 STATICCHECK   = $(shell go env GOPATH)/bin/staticcheck
+
+ifdef CI
+VERSION = ci
+else
+VERSION = $(shell ./$(BIN) --list | head -1)
+endif
 
 empty =
 space = $(empty) $(empty)
@@ -24,136 +31,145 @@ comma = ,
 
 .DEFAULT_GOAL := $(BIN)
 
-$(BIN): | build/bin/$(OS)-$(ARCH)
-	@cp -v $| $(call PLATFORM_BIN,$|)
-
 .PHONY: version
-version: $(VERSION_FILE)
-	@echo $(VERSION)
-
-.PHONY: set-version
-set-version: $(VERSION_FILE)
-	@{ \
-		set -e; \
-		old_version=$$($(call get-version)); \
-		$(call set-version,$(VERSION)); \
-		echo "version: $$old_version -> $(VERSION)"; \
-	}
-
-$(VERSION_FILE):
-	@{ \
-		echo 'package main'; \
-		echo; \
-		echo 'const Version = "dev"'; \
-	} > $(VERSION_FILE)
+version: ; @echo $(VERSION)
 
 .PHONY: test
-test:
-	@go test ./...
+test: ; go test ./...
 
 .PHONY: check
 check: checks := inherit
 check: checks += -ST1005 # incorrectly formatted error strings
 check: checks := $(subst $(space),$(comma),$(strip $(checks)))
 check:
-	@go vet ./...
-	@$(STATICCHECK) -checks $(checks) ./...
+	go vet ./...
+	$(STATICCHECK) -checks $(checks) ./...
 
 .PHONY: install
-install: bin = $(DESTDIR)$(BINDIR)
-install: man = $(DESTDIR)$(MANDIR)/man1
-install: $(BIN) $(MAN_ROFF)
-	@install -dm755 $(bin) $(man)
-	@install -v -m755 $(BIN) -t $(bin)
-	@install -v -m644 $(MAN_ROFF) $(man)/$(BIN).1
+install: $(BIN) $(MANROFF)
+	install -Dm755 $(BIN) -t $(DESTDIR)$(BINDIR)
+	install -Dm644 $(MANROFF) $(DESTDIR)$(MANDIR)/$(BIN).1
 
-.PHONY: clean
-clean:
-	@rm -rf \
-		$(BIN) \
-		$(MAN_ROFF) \
-		dist \
-		build
+$(BIN): build/$(OS)-$(ARCH)
+	cp $< $(call PLATFORM_BIN,$<)
 
-$(MAN_ROFF): $(MAN_ADOC)
-	@echo man: $@
-	@perl -0p \
+$(MANROFF): $(MANADOC)
+	perl -0p \
 		-e 's/``(.+?)``/_\1_/msg;' \
 		-e 's/`(.+?)`/*\1*/msg;' \
 		-e 's/<<(.+?)>>/<<\1,\U\1>>/g;' \
-		$(MAN_ADOC) \
+		$(MANADOC) \
 	| asciidoctor \
 		--backend manpage \
 		--doctype manpage \
 		--attribute version=$(VERSION) \
 		--verbose \
-		--out-file $(MAN_ROFF) \
+		--out-file $(MANROFF) \
 		- # read from stdin
 
+.PHONY: release
+release: private SHELL := $(BASH)
+release: pristine clean check test dist $(BIN)
+	@./$(BIN) --release $(VERSION) > /dev/null
+	@echo '-----'
+	@$(call release-message)
+	@echo '-----'
+	@$(call confirm,Push $(VERSION)?)
+	git checkout -b release/$(VERSION)
+	git add $(CHANGELOG)
+	git commit -m "release: $(VERSION)"
+	git tag --annotate -m "release $(VERSION)" $(VERSION)
+	git push --follow-tags origin release/$(VERSION)
+	$(call release-message) | hub release create \
+		--draft \
+		--browse \
+		--file - \
+		$$(echo dist/* | sed 's,dist/,--attach &,g') \
+		--commitish release/$(VERSION) \
+		$(VERSION)
+	@$(call confirm,Publish $(VERSION)?)
+	git checkout next && git merge release/$(VERSION)
+	git checkout master && git merge next
+	git push --delete origin release/$(VERSION)
+	git branch --delete --force release/$(VERSION)
+	git push origin :
+	hub release edit --draft=false $(VERSION)
+	@echo publish $(VERSION): OK
+
+
+DISTFILES = $(DOCS) *.go
+$(DISTFILES): ;
+
+dist: dist.dir $(PLATFORMS)
+
+.PHONY: $(PLATFORMS)
 .SECONDEXPANSION:
-$(PLATFORMS): | $(addprefix dist/$(BIN)-$$@-$(VERSION),.tar.gz .sha256)
+$(PLATFORMS): | $(addprefix dist/$(BIN)-$(VERSION)-$$@,.tar.gz .sha256)
 
-dist: $(PLATFORMS)
-
-dist/$(BIN)-%-$(VERSION).tar.gz: build/bin/% $(DOCS)
-	@test -d dist || mkdir dist
-	@tar czvf $@ \
-		--transform 's,.*/,kc-$(VERSION)/,g' \
+dist/$(BIN)-$(VERSION)-%.tar.gz: build/% $(DOCS)
+	tar czvf $@ \
+		--transform 's,.*/,kc-$(VERSION)/,' \
 		--transform 's,$*,$(call PLATFORM_BIN,$*),' \
-		--show-transformed $^ \
-		| sed 's,^,archive: $(@F)/,'
+		--show-transformed $^
 
 %.sha256: %.tar.gz
-	@(cd $(@D) && sha256sum $(^F) > $(@F))
-	@(cd $(@D) && sha256sum --check --strict $(@F) | sed 's/^/sum: /')
+	cd $(@D) && { \
+		sha256sum $(^F) > $(@F); \
+		sha256sum --check --strict $(@F); \
+	}
 
-build/bin/%: os = $(firstword $(call split,$(@F)))
-build/bin/%: arch = $(lastword $(call split,$(@F)))
-build/bin/%: *.go
-	@echo compile: $@
-	@GOOS=$(os) GOARCH=$(arch) go build -o $@
+build/%: SHELL := $(BASH)
+build/%: ldflags := -X main.buildDate=$(TODAY)
+build/%: ldflags += -X main.buildCommit=$(COMMIT)
+build/%: ldflags += -X main.buildVersion=$(VERSION)
+build/%: os = $(shell $(call canonic_os,$(firstword $(call split,$(@F)))))
+build/%: arch = $(shell $(call canonic_arch,$(lastword $(call split,$(@F)))))
+build/%: *.go | build.dir
+	GOOS=$(os) GOARCH=$(arch) go build -ldflags "$(ldflags)" -o $@
 
-.PHONY: release
-release: version = $$($(call get-version))
-release: branch := next
-release: check test clean $(BIN) $(VERSION_FILE)
+.PHONY: pristine
+pristine:
 	@git diff-index --quiet $(BRANCH) || { \
 		echo 'git: commit all changes before proceeding'; \
 		exit 1; \
 	}
-	@test "$(BRANCH)" = "$(branch)" || { \
-		echo 'git (on $(BRANCH)): switch to "$(branch)" before proceeding'; \
-		exit 1; \
-	}
-	@{ \
-		set -e; \
-		release=$$($(BIN) --release $(VERSION)); \
-		$(MAKE) set-version VERSION=$$release; \
-	}
-	@$(MAKE) dist VERSION=$(version)
-	@{ \
-		set -e; \
-		release=$(version); \
-		git add $(VERSION_FILE) $(CHANGELOG); \
-		git commit -m "release: $$release"; \
-		git tag $$release; \
-		git push --force --follow-tags; \
-	}
-	@{ \
-		echo $(version); \
-		$(BIN) --show | sed -n '2,$$p'; \
-	} | hub release create \
-			--file - \
-			$$(for asset in dist/*; do echo -n "--attach $$asset "; done) \
-			--commitish $(BRANCH) \
-			$(version)
+
+.PHONY: clean
+clean:
+	@rm -rf \
+		$(BIN) \
+		$(MANROFF) \
+		dist \
+		build
+
+SUBDIRS = dist.dir build.dir
+.PHONY: $(SUBDIRS)
+$(SUBDIRS): %.dir: ; @test -d $* || mkdir $*
 
 split = $(subst -, ,$(1))
 
-define set-version
-sed -r -i "s/^(const Version).+/\1 = \"$(1)\"/" $(VERSION_FILE)
+define canonic_arch
+    case $(1) in
+        x86) echo 386 ;;
+        x64) echo amd64 ;;
+    esac
 endef
 
-define get-version
-awk -F '"' '/^const Version/ { print $$2 }' $(VERSION_FILE)
+define canonic_os
+    case $(1) in
+        macos) echo darwin ;;
+            *) echo $(1) ;;
+    esac
+endef
+
+define confirm
+read -s -n 1 -p "$(1) [yN] " yn && \
+if [[ $${yn,,} != y ]]; then \
+	echo 'Exiting by choice...'; \
+	exit 1; \
+fi
+endef
+
+define release-message
+{ echo $(VERSION); echo; ./$(BIN) --show $(VERSION) | tail -n +3; }
 endef
