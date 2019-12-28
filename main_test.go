@@ -787,6 +787,130 @@ func TestInvoke(t *testing.T) {
 			},
 		},
 		{
+			name: "unrelease previous release",
+			args: []string{"-R"},
+			create: files{
+				"CHANGELOG.md": `# Changelog
+				## Unreleased
+				- a
+				- b
+
+				## 0.1.0
+				- c
+				`,
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## Unreleased
+
+				- c
+				- a
+				- b
+				`,
+			},
+		},
+		{
+			name: "unrelease only release",
+			args: []string{"-R"},
+			create: files{
+				"CHANGELOG.md": `# Changelog
+				## 0.1.0
+				- a
+				b
+				- c
+
+				`,
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## Unreleased
+
+				- a
+				  b
+				- c
+				`,
+			},
+		},
+		{
+			name: "unrelease merge release notes",
+			args: []string{"-R"},
+			create: files{
+				"CHANGELOG.md": `# Changelog
+
+				## Unreleased
+
+				Second note
+
+				- some change
+
+				## 0.1.0
+
+				First note
+
+				- a
+				b
+				- c
+
+				`,
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## Unreleased
+
+				First note
+
+				Second note
+
+				- a
+				  b
+				- c
+				- some change
+				`,
+			},
+		},
+		{
+			name:   "unrelease empty log",
+			args:   []string{"-R"},
+			stderr: "Nothing to unrelease.\n",
+			create: files{
+				"CHANGELOG.md": `# Changelog
+				`,
+			},
+		},
+		{
+			name:   "unrelease unreleased-only log",
+			args:   []string{"-R"},
+			stderr: "Nothing to unrelease.\n",
+			create: files{
+				"CHANGELOG.md": `# Changelog
+				## Unreleased
+				`,
+			},
+		},
+		{
+			name:   "unrelease and validate",
+			args:   []string{"-R"},
+			stderr: "CHANGELOG.md:8: unlabeled and labeled changes cannot coexist\n",
+			create: files{
+				"CHANGELOG.md": `# Changelog
+
+				## Unreleased
+
+				### Added
+
+				- test change
+
+				## 0.1.0
+
+				- a
+				- b
+				`,
+			},
+		},
+		{
 			name: "change label prefix",
 			args: []string{"a"},
 			create: files{

@@ -390,6 +390,20 @@ func (rel *release) mergeChange(typ, text string) {
 	})
 }
 
+func (rel *release) merge(other *release) {
+	switch rel.note {
+	case "":
+		rel.note = other.note
+	default:
+		rel.note += "\n\n" + other.note
+	}
+	for typ, list := range other.changes {
+		for _, ch := range list {
+			rel.pushChange(typ, ch)
+		}
+	}
+}
+
 func (rel *release) String() string {
 	if rel.unreleased() {
 		return strconv.Quote(rel.version)

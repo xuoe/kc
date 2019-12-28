@@ -33,17 +33,18 @@ func main() {
 
 type invocation struct {
 	cmd struct {
-		init    bool
-		sort    bool
-		dump    bool
-		list    bool
-		listAll bool
-		show    bool
-		delete  bool
-		edit    bool
-		release bool
-		help    bool
-		version bool
+		init      bool
+		sort      bool
+		dump      bool
+		list      bool
+		listAll   bool
+		show      bool
+		delete    bool
+		edit      bool
+		release   bool
+		unrelease bool
+		help      bool
+		version   bool
 	}
 	opts struct {
 		config    string
@@ -128,6 +129,8 @@ func (inv *invocation) parse(args []string) error {
 	fs.BoolVar(&inv.cmd.edit, "e", false, "")
 	fs.BoolVar(&inv.cmd.release, "release", false, "")
 	fs.BoolVar(&inv.cmd.release, "r", false, "")
+	fs.BoolVar(&inv.cmd.unrelease, "unrelease", false, "")
+	fs.BoolVar(&inv.cmd.unrelease, "R", false, "")
 	fs.BoolVar(&inv.cmd.help, "help", false, "")
 	fs.BoolVar(&inv.cmd.help, "h", false, "")
 	fs.BoolVar(&inv.cmd.version, "version", false, "")
@@ -172,7 +175,7 @@ func (inv *invocation) invoke(args []string) (err error) {
 					inv.errf("... and %d more %s\n", rest, pluralize("error", rest))
 					return
 				}
-				inv.outln(err.Error())
+				inv.errln(err.Error())
 			}
 		case ioError:
 			inv.errf("I/O Error: %s\n", err)
@@ -209,6 +212,8 @@ func (inv *invocation) invoke(args []string) (err error) {
 		return inv.doEdit()
 	case inv.cmd.release:
 		return inv.doRelease()
+	case inv.cmd.unrelease:
+		return inv.doUnrelease()
 	default:
 		return inv.doChange()
 	}
@@ -252,6 +257,7 @@ Commands:
     -l, --list [PATTERN]              List all releases or those that match PATTERN.
     -L, --list-all [PATTERN]          Like --list, but include the "Unreleased" section.
     -r, --release [VERSION]           Release the "Unreleased" section.
+    -R, --unrelease                   Unrelease the last release.
     -S, --sort                        Sort releases according to semver.
 
 Flags:
@@ -783,6 +789,30 @@ func (inv *invocation) doReleaseMerge(ver string) error {
 		}
 	}
 	return nil
+}
+
+func (inv *invocation) doUnrelease() error {
+	log := inv.changelog()
+	if log.empty() || len(log.releases) == 1 && log.head().unreleased() {
+		return warn("Nothing to unrelease.")
+	}
+	head := log.head()
+	if head.unreleased() {
+		prev := log.at(1)
+		prev.merge(head)
+		log.delete(prev.version)
+		*head = *prev
+	}
+	if !head.unreleased() {
+		head.version = "Unreleased"
+		head.date = time.Time{}
+		head.link = ""
+	}
+	cfg := inv.config()
+	if err := log.validate(cfg); err != nil {
+		return err
+	}
+	return log.save(cfg)
 }
 
 func (inv *invocation) doChange() (err error) {
