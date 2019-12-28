@@ -823,6 +823,66 @@ func TestInvoke(t *testing.T) {
 				`,
 			},
 		},
+		{
+			name: "change after release",
+			args: []string{"a", "test change"},
+			create: files{
+				"CHANGELOG.md": `# Changelog
+				## 0.1.0
+
+				### Added
+				- old added change
+
+				### Removed
+				- old remove change
+				`,
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## Unreleased
+
+				### Added
+
+				- test change
+
+				## 0.1.0
+
+				### Added
+
+				- old added change
+
+				### Removed
+
+				- old remove change
+				`,
+			},
+		},
+		{
+			name: "change after note-only release",
+			args: []string{"a", "test change"},
+			create: files{
+				"CHANGELOG.md": `# Changelog
+				## 0.1.0
+
+				This is a note.
+				`,
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## Unreleased
+
+				### Added
+
+				- test change
+
+				## 0.1.0
+
+				This is a note.
+				`,
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// Create a temporary directory and cd into it.
