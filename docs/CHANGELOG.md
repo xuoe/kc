@@ -13,6 +13,13 @@
 
 - Changelog titles are now required.
 
+### Fixed
+
+- Unreleased links are now generated correctly when the _Unreleased_ section is
+  the only section left after editing or removing releases.
+- The documentation for the `unreleased` template was referring to an incorrect
+  placeholder (`{CURRENT}`). The correct one is `{PREVIOUS}`.
+
 ## [0.1.0] - 2019-12-26
 
 Initial release.

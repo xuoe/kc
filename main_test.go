@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -521,6 +521,70 @@ func TestInvoke(t *testing.T) {
 			stderr: "IGNORE",
 		},
 		{
+			name:  "delete one and generate links",
+			args:  []string{"-d", "1.3*"},
+			stdin: "Y",
+			create: files{
+				".kcrc": `
+				[links]
+					unreleased      = "unreleased/"
+					release         = "prev/{PREVIOUS}/curr/${CURRENT}"
+					initial-release = "init/{CURRENT}"
+				`,
+				"CHANGELOG.md": `# Changelog
+				## Unreleased
+				## 1.0.0
+				- Change
+				## 1.3.0
+				- Change
+				`,
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## [Unreleased]
+
+				## [1.0.0]
+
+				- Change
+
+				[Unreleased]: unreleased/
+				[1.0.0]: init/1.0.0
+				`,
+			},
+			stderr: "IGNORE",
+		},
+		{
+			name:  "delete all but unreleased and generate links",
+			args:  []string{"-d", "1*"},
+			stdin: "\nY",
+			create: files{
+				".kcrc": `
+				[links]
+					unreleased      = "unreleased/"
+					release         = "prev/{PREVIOUS}/curr/${CURRENT}"
+					initial-release = "init/{CURRENT}"
+				`,
+				"CHANGELOG.md": `# Changelog
+				## [Unreleased]
+				## 1.0.0
+				- Change
+				## 1.3.0
+				- Change
+				[Unreleased]: unreleased/
+				`,
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## [Unreleased]
+
+				[Unreleased]: unreleased/
+				`,
+			},
+			stderr: "IGNORE",
+		},
+		{
 			name: "edit unreleased",
 			args: []string{"-e"},
 			create: files{
@@ -607,6 +671,114 @@ func TestInvoke(t *testing.T) {
 				This
 				is a
 				test
+				`,
+			},
+		},
+		{
+			name:   "edit delete keep or regen unreleased link if placeholder",
+			args:   []string{"-e", "2*"},
+			stdin:  "\nY",
+			stderr: "IGNORE",
+			create: files{
+				".kcrc": `
+				[links]
+					unreleased      = "/unreleased/{PREVIOUS}"
+					release         = "prev/{PREVIOUS}/curr/${CURRENT}"
+					initial-release = "init/{CURRENT}"
+				`,
+				"CHANGELOG.md": `# Changelog
+				## [Unreleased]
+
+				## [2.0.0]
+
+				## [1.0.0]
+
+				[Unreleased]: /unreleased/2.0.0
+				[2.0.0]: prev/1.0.0/curr/2.0.0
+				[1.0.0]: init/1.0.0
+				`,
+			},
+			edits: files{
+				"1.0.0": "",
+				"2.0.0": "",
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## [Unreleased]
+
+				## [1.0.0]
+
+				[Unreleased]: /unreleased/1.0.0
+				[1.0.0]: init/1.0.0
+				`,
+			},
+		},
+		{
+			name:   "edit delete and always keep or regen unreleased link if no placeholder",
+			args:   []string{"-e", "*"},
+			stdin:  "\nY",
+			stderr: "IGNORE",
+			create: files{
+				".kcrc": `
+				[links]
+					unreleased      = "regen/unreleased"
+					release         = "prev/{PREVIOUS}/curr/${CURRENT}"
+					initial-release = "init/{CURRENT}"
+				`,
+				"CHANGELOG.md": `# Changelog
+				## [Unreleased]
+				## [2.0.0]
+				## [1.0.0]
+
+				[Unreleased]: /unreleased
+				[2.0.0]: prev/1.0.0/curr/2.0.0
+				[1.0.0]: init/1.0.0
+				`,
+			},
+			edits: files{
+				"1.0.0": "",
+				"2.0.0": "",
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## [Unreleased]
+
+				[Unreleased]: regen/unreleased
+				`,
+			},
+		},
+		{
+			name:   "edit delete and drop unreleased link if no previous release",
+			args:   []string{"-e", "*"},
+			stdin:  "\nY",
+			stderr: "IGNORE",
+			create: files{
+				".kcrc": `
+				[links]
+					unreleased      = "unreleased/{PREVIOUS}"
+					release         = "prev/{PREVIOUS}/curr/${CURRENT}"
+					initial-release = "init/{CURRENT}"
+				`,
+				"CHANGELOG.md": `# Changelog
+				## [Unreleased]
+				## [1.0.0]
+				## [2.0.0]
+
+				[Unreleased]: /unreleased/1.0.0
+				[2.0.0]: prev/1.0.0/curr/2.0.0
+				[1.0.0]: init/1.0.0
+				`,
+			},
+			edits: files{
+				"1.0.0": "",
+				"2.0.0": "",
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## Unreleased
 				`,
 			},
 		},
@@ -1064,13 +1236,13 @@ func TestInvoke(t *testing.T) {
 				stdout: stdout,
 				editor: func(name string, path string) ([]byte, error) {
 					if test.edits == nil {
-						t.Fatal("unexpected edit", name, path)
+						goto END
 					}
-					text, ok := test.edits[name]
-					if ok {
+					if text, ok := test.edits[name]; ok {
 						return []byte(noTabs(text)), nil
 					}
-					return nil, errors.New("missing edit data")
+				END:
+					return nil, fmt.Errorf("missing edit data for %q", name)
 				},
 			}
 

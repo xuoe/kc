@@ -807,11 +807,22 @@ func (r *changelogRenderer) renderReleases(w io.Writer) {
 			prev         = r.log.at(i + 1)
 		)
 
-		// Generate links only if a corresponding template exists;
-		// otherwise, use those found in the input text, if any.
+		// Regenerate link if possible.
 		switch {
+		case isUnreleased && isInitial:
+			tmpl := tmpls[keyUnreleased]
+			switch {
+			case placeholderPrevious.in(tmpl):
+				// Drop the Unreleased link if it is referencing a non-existent
+				// previous release.
+				link = ""
+			default:
+				// Otherwise, use the template (if any) and discard the
+				// original link.
+				link = tmpl
+			}
 		case isUnreleased:
-			if tmpl := tmpls[keyUnreleased]; tmpl != "" && prev != nil {
+			if tmpl := tmpls[keyUnreleased]; tmpl != "" {
 				link = placeholderPrevious.interpolate(tmpl, prev.version)
 			}
 		case isInitial:
@@ -931,6 +942,10 @@ type placeholder string
 
 func (p placeholder) interpolate(str string, val string) string {
 	return strings.ReplaceAll(str, string(p), val)
+}
+
+func (p placeholder) in(str string) bool {
+	return string(p) != "" && strings.Contains(str, string(p))
 }
 
 type templates map[string]string

@@ -188,7 +188,11 @@ particular type.
 *unreleased*:::
 The format for the _Unreleased_ section link.
 {zwsp} +
-Placeholders: *{CURRENT}*.
+Placeholders: *{PREVIOUS}*.
++
+The link is generated when the template contains *{PREVIOUS}* and a previous
+release exists. If the template is non-empty and does not contain *{PREVIOUS}*,
+it is always generated.
 
 *initial-release*:::
 The format for the initial release (the bottom-most release) link.
