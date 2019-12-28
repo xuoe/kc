@@ -460,6 +460,7 @@ func newChangelogParser(name string, cfg *config) *changelogParser {
 		{"#", p.parseHeader},
 		{"-", p.parseUnlabeledChanges},
 		{"+", p.parseUnlabeledChanges},
+		{"", p.parseAny},
 	}
 	return p
 }
@@ -494,7 +495,7 @@ func (p *changelogParser) parse(r io.Reader) (*changelog, error) {
 func (p *changelogParser) parseHeader(line string) error {
 	title := strings.TrimSpace(line[1:]) // #
 	if title == "" {
-		return errors.New("empty changelog title")
+		return errors.New("missing changelog title")
 	}
 	p.log.title = title
 	buf := new(strings.Builder)
@@ -659,6 +660,13 @@ func (p *changelogParser) parseReleaseLink(line string) error {
 		return fmt.Errorf("release link (%s) is missing a corresponding version heading", ver)
 	}
 	rel.link = link
+	return nil
+}
+
+func (p *changelogParser) parseAny(line string) error {
+	if p.log.title == "" {
+		return errors.New("missing changelog title")
+	}
 	return nil
 }
 

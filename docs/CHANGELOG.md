@@ -9,6 +9,10 @@
   the _Unreleased_ section. If no _Unreleased_ section exists, the last release
   assumes the role.
 
+### Changed
+
+- Changelog titles are now required.
+
 ## [0.1.0] - 2019-12-26
 
 Initial release.

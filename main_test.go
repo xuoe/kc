@@ -524,7 +524,7 @@ func TestInvoke(t *testing.T) {
 			name: "edit unreleased",
 			args: []string{"-e"},
 			create: files{
-				"CHANGELOG.md": `
+				"CHANGELOG.md": `# Changelog
 				## Unreleased
 				- a change
 				- b change
@@ -536,7 +536,9 @@ func TestInvoke(t *testing.T) {
 				`,
 			},
 			expect: files{
-				"CHANGELOG.md": `## Unreleased
+				"CHANGELOG.md": `# Changelog
+
+				## Unreleased
 
 				- c change
 				`,
@@ -546,7 +548,7 @@ func TestInvoke(t *testing.T) {
 			name: "edit rename unreleased",
 			args: []string{"-e"},
 			create: files{
-				"CHANGELOG.md": `
+				"CHANGELOG.md": `# Changelog
 				## Unreleased
 				- a change
 				- b change
@@ -558,7 +560,9 @@ func TestInvoke(t *testing.T) {
 				`,
 			},
 			expect: files{
-				"CHANGELOG.md": `## 0.1.0
+				"CHANGELOG.md": `# Changelog
+
+				## 0.1.0
 
 				Initial release.
 				`,
@@ -568,7 +572,7 @@ func TestInvoke(t *testing.T) {
 			name: "edit delete unreleased",
 			args: []string{"-e"},
 			create: files{
-				"CHANGELOG.md": `
+				"CHANGELOG.md": `# Changelog
 				## Unreleased
 				- a change
 				- b change
@@ -578,7 +582,32 @@ func TestInvoke(t *testing.T) {
 				"Unreleased": "",
 			},
 			expect: files{
-				"CHANGELOG.md": "",
+				"CHANGELOG.md": "# Changelog\n",
+			},
+		},
+		{
+			name: "edit delete unreleased leave header",
+			args: []string{"-e"},
+			create: files{
+				"CHANGELOG.md": `# Changelog
+				This
+				is a
+				test
+				## Unreleased
+				- a change
+				- b change
+				`,
+			},
+			edits: files{
+				"Unreleased": "",
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				This
+				is a
+				test
+				`,
 			},
 		},
 		{

@@ -15,13 +15,30 @@ func TestChangelog(t *testing.T) {
 	}{
 		{
 			name: "no title",
-			in:   "asdf\n",
-			out:  "",
+			in:   "test\n",
+			err:  "Line 1: missing changelog title",
+		},
+		{
+			name: "no title",
+			in:   "test## Unreleased",
+			err:  "Line 1: missing changelog title",
+		},
+		{
+			name: "no title",
+			in:   "\n\n\n## Unreleased",
+			err: `Line 1: missing changelog title
+			Line 2: missing changelog title
+			Line 3: missing changelog title`,
+		},
+		{
+			name: "no title",
+			in:   "test## Unreleased",
+			err:  "Line 1: missing changelog title",
 		},
 		{
 			name: "empty title",
 			in:   "#\n",
-			err:  "Line 1: empty changelog title",
+			err:  "Line 1: missing changelog title",
 		},
 		{
 			name: "title spacing",
