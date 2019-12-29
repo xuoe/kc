@@ -48,7 +48,7 @@ check:
 .PHONY: install
 install: $(BIN) $(MANROFF).gz
 	install -Dm755 $(BIN) -t $(DESTDIR)$(BINDIR)
-	install -Dm644 $(MANROFF).gz $(DESTDIR)$(MANDIR)/$(BIN).1.gz
+	install -Dm644 $(MANROFF).gz $(DESTDIR)$(MANDIR)/man1/$(BIN).1.gz
 
 $(BIN): build/$(OS)-$(ARCH)
 	cp $< $(call PLATFORM_BIN,$<)
