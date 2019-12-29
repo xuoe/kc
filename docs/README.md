@@ -17,6 +17,9 @@ At a glance, __kc__ can
 * stash unreleased changes, and
 * more...
 
+For an example changelog, see that of [Keep
+a Changelog](https://github.com/olivierlacan/keep-a-changelog/blob/master/CHANGELOG.md).
+
 ## Installation
 
 __kc__ may be installed by
@@ -38,7 +41,7 @@ This section serves as a quick guide to using `kc`. For more details, see the
 For most invocations, __kc__ requires a changelog file (usually `CHANGELOG.md`)
 to be present either in the current directory or up the directory tree. If
 a changelog does not already exist, you can initialize one by issuing `kc
---init [changelog]`. (See `kc --dump ch[angelog] t[emplates]` for a list of
+--init [changelog]`. (See `kc --print changelog.templates` for a list of
 changelog templates.)
 
 You may also require a configuration file to alter the link generation process
@@ -50,37 +53,40 @@ beyond those already found in the changelog file.
 #### Adding Changes
 
 __kc__ operates around _changes_ and _releases_. To introduce a change, invoke
-`kc [LABEL] [TEXT]` and, depending on __kc__'s configuration, you may be
-prompted to enter a change label or to capture the change text in your
-preferred text editor.
+`kc [LABEL] [TEXT]`. If you omit `TEXT`, `kc` will open a text editor (see the
+manual for [Environment](./MANUAL.adoc#Environment)) to capture the change text.
+If you also omit `LABEL`, `kc` will either treat it as `TEXT` or inform you
+that a label is required. (See `kc --print config.labels` for a list of change
+labels.)
 
-Prior to release, all new changes are stashed under an _Unreleased_ section.
+Prior to release, all changes are stashed under an _Unreleased_ section.
 
 #### Releasing Changes
 
-To create a release, issue `kc --release`. This transforms the
-_Unreleased_ section into a new release section, whose title contains an
-incremented version string (as per [semver](https://semver.org/spec/v2.0.0))
-and the current date in [ISO-8601
-format](https://en.wikipedia.org/wiki/ISO_8601). Running `kc --list` prints
-a single line: `0.0.1`.
+To release changes stashed under the _Unreleased_ section, issue `kc --release
+[VERSION]`. For example, to increment the minor version number, issue `kc
+--release minor`. This moves the unreleased changes into a new release section,
+whose title contains the incremented version string (as per
+[semver](https://semver.org/spec/v2.0.0)) and the current date in [ISO-8601
+format](https://en.wikipedia.org/wiki/ISO_8601). At this point, running `kc
+--list` prints a single line: `0.1.0`.
 
 #### Editing a Release
 
-To edit the latest release, issue `kc --edit` without any arguments to open
-the release in your preferred text editor. You can edit any of the following:
-the version string, the release date, any change label and any change text.
+To edit the latest release, issue `kc --edit`. This opens a text editor with
+the release body ready for editing. You can edit any of the following: the
+version string, the release date, any change label and any change text.
 Once done, save the file and exit the editor.
 
-Note that if an _Unreleased_ section exists, it will be opened for editing
+Note that if the _Unreleased_ section exists, it will be opened for editing
 instead.
 
 #### Inspecting a Release
 
-To see the latest release and the changes introduced in the previous section,
-invoke `kc --show` without any arguments.
+To see changes introduced by the latest release, invoke `kc --show` without any
+arguments.
 
-Note that if an _Unreleased_ section exists, it will be printed instead.
+Note that if the _Unreleased_ section exists, it will be printed instead.
 
 #### Deleting a Release
 
@@ -94,9 +100,9 @@ implicit _Unreleased_ section instead.
 ## Getting Help
 
 `kc --help` provides a quick overview of the available commands and their
-arguments. For a more thorough coverage, consult [the manual](./MANUAL.adoc)
-distributed with the release package (either `MANUAL.roff` or `MANUAL.md`), or
-the one generated during the [build process](./BUILD.md) (`man 1 kc`).
+arguments. For a more in-depth coverage, consult [the manual](./MANUAL.adoc)
+distributed with the release package, or the one generated during the [build
+process](./BUILD.md) (`man 1 kc`).
 
 ## License
 

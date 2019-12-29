@@ -127,8 +127,11 @@ changes per release/section.
 *-e, --edit* [_PATTERN_]::
 
 Edit releases that match _PATTERN_, or edit the _Unreleased_ section if
-_PATTERN_ is omitted. Editing is done by opening a text editor with the release
-content (version, note and changes) of each matching release, one by one.
+_PATTERN_ is omitted. Editing is done by opening a text editor with the content
+(version, note and changes) of each matching release, one by one.
++
+If the entire release body is deleted, saving the changes and exiting the
+editor deletes the release.
 
 *-r, --release* [_VERSION_]::
 
