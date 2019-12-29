@@ -153,10 +153,10 @@ Unrelease the changes introduced by the last release. Unreleasing consists of
 merging the last release with the _Unreleased_ section. If no _Unreleased_
 section exists, the last release takes its place. In all cases, the link and
 date of the last release are discarded.
-
++
 Release notes are joined by an empty line.
 
-*--sort*::
+*-t, --sort*::
 
 Sort releases according to semver.
 

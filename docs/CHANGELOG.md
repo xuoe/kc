@@ -24,6 +24,8 @@
   the only section left after editing or removing releases.
 - The documentation for the `unreleased` template was referring to an incorrect
   placeholder (`{CURRENT}`). The correct one is `{PREVIOUS}`.
+- Remove unused sort flag `-S` and replace it with `-t`.
+- Existing releases are now sorted prior to `--release`.
 
 ## [0.1.0] - 2019-12-26
 

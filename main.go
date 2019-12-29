@@ -122,6 +122,7 @@ func (inv *invocation) parse(args []string) error {
 	fs.BoolVar(&inv.cmd.init, "init", false, "")
 	fs.BoolVar(&inv.cmd.init, "i", false, "")
 	fs.BoolVar(&inv.cmd.sort, "sort", false, "")
+	fs.BoolVar(&inv.cmd.sort, "t", false, "")
 	fs.BoolVar(&inv.cmd.print, "print", false, "")
 	fs.BoolVar(&inv.cmd.print, "p", false, "")
 	fs.BoolVar(&inv.cmd.list, "list", false, "")
@@ -265,7 +266,7 @@ Commands:
     -L, --list-all [PATTERN]      Like --list, but include the "Unreleased" section.
     -r, --release [VERSION]       Release the "Unreleased" section.
     -R, --unrelease               Unrelease the last release.
-    -S, --sort                    Sort releases according to semver.
+    -t, --sort                    Sort releases according to semver.
 
 Arguments:
     FILE      One of "changelog" or "config"
@@ -791,6 +792,7 @@ func (inv *invocation) doRelease() error {
 			}
 		}
 	}
+	log.sort()
 	if err := do(arg); err != nil {
 		return err
 	}

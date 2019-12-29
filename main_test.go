@@ -998,7 +998,7 @@ func TestInvoke(t *testing.T) {
 			},
 		},
 		{
-			name:   "release merge versions",
+			name:   "release merge",
 			args:   []string{"-r", "0.1.0"},
 			stdin:  "yy",
 			stderr: "IGNORE",
@@ -1020,6 +1020,32 @@ func TestInvoke(t *testing.T) {
 				- c
 				- a
 				- b
+				`,
+			},
+		},
+		{
+			name:   "release always sort",
+			args:   []string{"-r", "min"},
+			stdout: "0.2.0\n",
+			stderr: "IGNORE",
+			create: files{
+				"CHANGELOG.md": `# Changelog
+				## Unreleased
+				- change
+				## 0.0.1
+				## 0.1.0
+				`,
+			},
+			expect: files{
+				"CHANGELOG.md": `# Changelog
+
+				## 0.2.0 - {TEST_DATE}
+
+				- change
+
+				## 0.1.0
+
+				## 0.0.1
 				`,
 			},
 		},
