@@ -83,21 +83,23 @@ file is initialized at the specified path. The same applies for configuration
 files and *--config*.
 +
 Some templates may prompt the user for additional details (e.g., changelog title).
-To see the list of supported templates for _FILE_, issue `kc --dump FILE
-templates`.
+To see the list of supported templates for _FILE_, issue `kc --print
+FILE.templates`.
 
-*-p, --dump* [_FILE_] [_PROP_]::
-Print changelog or configuration file details.
+*-p, --print* [_PROP_]...::
+Print a kc property.
 +
-_FILE_ may be one of *config* or *changelog* (default).
+_PROP_ keys may be separated by a space or dot character, i.e.,
+`changelog path` and `changelog.path` are equivalent. If a key is
+specified as an asterisk (`*`), the entire key set at that depth level and
+below is printed, which differs from the empty string key where only the keys
+for the current property set are printed.
 +
-_PROP_ may be one of:
+_PROP_ keys may be specified as prefixes, e.g., `ch f` is equivalent to
+`changelog file`.
 +
-{empty}:::
-+
-*file* (default):::: Print the raw file content as interpreted by *kc*.
-*path*:::: Print the file path as detected by *kc*.
-*templates*:::: Print the list of templates supported by _FILE_.
+To see the entire property set, issue `kc --print '*'`; to see the top-level
+property set, drop the asterisk.
 
 *-s, --show* [_PATTERN_]::
 
@@ -164,8 +166,9 @@ Sort releases according to semver.
 configuration file (see <<Files>> and <<Examples>>). The file is composed of
 two tables: `changes` and `links`.
 
-Use `kc --dump config` to inspect the active configuration settings, and `kc
---dump config path` to inspect the configuration file path.
+Use `kc --print config` to inspect configuration properties. For example, `kc
+--print config file` prints the raw configuration file, while `kc --print
+config path` prints the configuration file path.
 
 === *changes*
 A single-key table, where the key is `labels`: an array that specifies which
@@ -253,11 +256,11 @@ Initialize and inspect a changelog file:
 ----
 $ kc --init
 Title [Changelog]: <RETURN>
-$ kc --dump
+$ kc --print changelog file
 # Changelog
 
 ## Unreleased
-$ kc --dump changelog path
+$ kc --print changelog path
 CHANGELOG.md
 ----
 
@@ -266,9 +269,9 @@ Initialize and inspect a configuration file:
 ----
 $ kc --init conf github
 Repository [user/repository]: xuoe/kc<RETURN>
-$ kc --dump conf path
+$ kc --print conf path
 .kcrc
-$ kc --dump conf
+$ kc --print conf file
 [links]
   initial-release = "https://github.com/xuoe/kc/releases/tag/{CURRENT}"
   mention = "https://github.com/{MENTION}"
@@ -286,13 +289,13 @@ $ kc --dump conf
   ]
 ----
 
-Create a changelog, append a change, release changes:
+Create a changelog, append a change, cut a release:
 
 ----
 $ kc --init
 Title [Changelog]: <RETURN>
 $ kc a This is an example change.
-$ kc --dump
+$ kc --print changelog file
 # Changelog
 
 ## Unreleased
@@ -302,7 +305,7 @@ $ kc --dump
 - This is an example change.
 $ kc --release min
 0.1.0
-$ kc --dump
+$ kc --print ch.f # shorthand for "changelog file"
 # Changelog
 
 ## 0.1.0 - 2019-12-20
@@ -310,6 +313,8 @@ $ kc --dump
 ### Added
 
 - This is an example change.
+$ kc --list
+0.1.0
 ----
 
 Delete releases:
@@ -342,19 +347,8 @@ Print the path to the active changelog:
 ----
 $ touch CHANGELOG.md
 $ mkdir -p a/b/c; cd a/b/c
-$ kc --dump changelog path
+$ kc --print changelog path
 ../../../CHANGELOG.md
-----
-
-Print the contents of the active changelog:
-
-----
-$ kc --init
-Title [Changelog]: <RETURN>
-$ kc --dump changelog # or just kc --dump
-# Changelog
-
-## Unreleased
 ----
 
 == License

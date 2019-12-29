@@ -78,34 +78,11 @@ func keys(m interface{}) (keys []string) {
 	return
 }
 
-func ensureMatch(vals []string, val *string) error {
-	v := *val
-	ms := matchPrefix(vals, v)
-	if len(ms) != 1 {
-		vals := strings.Join(vals, " | ")
-		if v == "default" {
-			return fmt.Errorf("no default value. Try one of: %s", vals)
-		}
-		return fmt.Errorf("%q must match at most one of: %s", v, vals)
-	}
-	*val = ms[0]
-	return nil
-}
-
 func matchPattern(vals []string, pattern string) []string {
 	if isGlob(pattern) {
 		return matchGlob(vals, pattern)
 	}
-	return matchPrefix(vals, pattern)
-}
-
-func matchPrefix(vals []string, prefix string) (ms []string) {
-	for _, val := range vals {
-		if strings.HasPrefix(strings.ToLower(val), strings.ToLower(prefix)) {
-			ms = append(ms, val)
-		}
-	}
-	return
+	return prefix(pattern).match(vals)
 }
 
 func matchGlob(vals []string, glob string) (ms []string) {
@@ -124,6 +101,35 @@ func isGlob(path string) bool {
 		magicChars = `*?[\`
 	}
 	return strings.ContainsAny(path, magicChars)
+}
+
+type prefix string
+
+func (p prefix) match(vals []string) (res []string) {
+	for _, val := range vals {
+		if strings.HasPrefix(strings.ToLower(val), strings.ToLower(string(p))) {
+			res = append(res, val)
+		}
+	}
+	return
+}
+
+func (p prefix) matchAs(vals []string, typ string) (string, error) {
+	if p == "" {
+		return "", fmt.Errorf("unspecified %s must match one of: %s", typ, strings.Join(vals, ", "))
+	}
+	ms := p.match(vals)
+	switch len(ms) {
+	case 0:
+		return "", fmt.Errorf("no such %s: %s, try: %s", typ, p, strings.Join(vals, " | "))
+	case 1:
+		return ms[0], nil
+	default:
+		for i := range ms {
+			ms[i] = strings.Replace(ms[i], string(p), string(p)+"*", 1)
+		}
+		return "", fmt.Errorf("ambiguous %s match for %q: %s", typ, p, strings.Join(ms, ", "))
+	}
 }
 
 // relativeParentDir returns a relative path to the parent of dir and whether

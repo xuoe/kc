@@ -42,7 +42,7 @@ type invocation struct {
 	cmd struct {
 		init      bool
 		sort      bool
-		dump      bool
+		print     bool
 		list      bool
 		listAll   bool
 		show      bool
@@ -122,8 +122,8 @@ func (inv *invocation) parse(args []string) error {
 	fs.BoolVar(&inv.cmd.init, "init", false, "")
 	fs.BoolVar(&inv.cmd.init, "i", false, "")
 	fs.BoolVar(&inv.cmd.sort, "sort", false, "")
-	fs.BoolVar(&inv.cmd.dump, "dump", false, "")
-	fs.BoolVar(&inv.cmd.dump, "p", false, "")
+	fs.BoolVar(&inv.cmd.print, "print", false, "")
+	fs.BoolVar(&inv.cmd.print, "p", false, "")
 	fs.BoolVar(&inv.cmd.list, "list", false, "")
 	fs.BoolVar(&inv.cmd.list, "l", false, "")
 	fs.BoolVar(&inv.cmd.listAll, "list-all", false, "")
@@ -203,8 +203,8 @@ func (inv *invocation) invoke(args []string) (err error) {
 		return inv.doVersion()
 	case inv.cmd.init:
 		return inv.doInit()
-	case inv.cmd.dump:
-		return inv.doDump()
+	case inv.cmd.print:
+		return inv.doPrint()
 	case inv.cmd.sort:
 		return inv.doSort()
 	case inv.cmd.list:
@@ -248,37 +248,37 @@ func panicf(fs string, args ...interface{}) {
 func (inv *invocation) doHelp() error {
 	tmpl := fmt.Sprintf("kc %s\n", buildVersion) + `
 Usage:
-    kc [OPTIONS] <COMMAND> [ARGS]
-    kc [LABEL] [TEXT]
+    kc [OPTIONS] <COMMAND> [ARGS]...
+    kc [LABEL] [TEXT]...
 
 Options:
     -c, --changelog <PATH>  Load the changelog found at PATH instead of auto-detecting it.
     -C, --config <PATH>     Load the config found at PATH instead of auto-detecting it.
 
 Commands:
-    -i, --init [FILE] [TEMPLATE]      Initialize a config or changelog file.
-    -p, --dump [FILE] [PROP]          Print FILE details.
-    -s, --show [PATTERN]              Show the "Unreleased" section or releases that match PATTERN.
-    -e, --edit [PATTERN]              Like --show, but edit instead.
-    -d, --delete [PATTERN]            Like --show, but delete instead.
-    -l, --list [PATTERN]              List all releases or those that match PATTERN.
-    -L, --list-all [PATTERN]          Like --list, but include the "Unreleased" section.
-    -r, --release [VERSION]           Release the "Unreleased" section.
-    -R, --unrelease                   Unrelease the last release.
-    -S, --sort                        Sort releases according to semver.
+    -i, --init [FILE] [TEMPLATE]  Initialize a config or changelog file.
+    -p, --print [PROP]...         Print or debug a property.
+    -s, --show [PATTERN]          Show the "Unreleased" section or releases that match PATTERN.
+    -e, --edit [PATTERN]          Like --show, but edit instead.
+    -d, --delete [PATTERN]        Like --show, but delete instead.
+    -l, --list [PATTERN]          List all releases or those that match PATTERN.
+    -L, --list-all [PATTERN]      Like --list, but include the "Unreleased" section.
+    -r, --release [VERSION]       Release the "Unreleased" section.
+    -R, --unrelease               Unrelease the last release.
+    -S, --sort                    Sort releases according to semver.
+
+Arguments:
+    FILE      One of "changelog" or "config"
+    TEMPLATE  A template name (discoverable via --print)
+    PROP      A property name (use * for a complete list)
+    PATTERN   An exact version string, a version string prefix or a glob pattern
+    VERSION   A version string that adheres to semver, or one of "patch", "minor", "major"
+
+    Note that most arguments may be specified as prefixes.
 
 Flags:
     -h, --help     Print this message.
     -v, --version  Print version information.
-
-Arguments:
-    FILE      One of "changelog" or "config"
-    TEMPLATE  A template name (discoverable via --dump)
-    PROP      One of "path", "file" or "templates"
-    PATTERN   An exact version string, a version string prefix or a glob pattern
-    VERSION   A version string that adheres to semver, or one of "patch", "minor", "major"
-
-    Note that all arguments may be specified as prefixes, e.g., "p" or "pa" instead of "patch" or "path".
 	`
 	inv.errln(strings.TrimSpace(tmpl))
 	return nil
@@ -295,7 +295,7 @@ func (inv *invocation) doInit() (err error) {
 	if len(inv.args) >= 1 {
 		file = strings.ToLower(inv.args[0])
 	}
-	if err := ensureMatch([]string{"changelog", "config"}, &file); err != nil {
+	if file, err = prefix(file).matchAs([]string{"changelog", "config"}, "file type"); err != nil {
 		return err
 	}
 	var tmpls templates
@@ -311,8 +311,8 @@ func (inv *invocation) doInit() (err error) {
 	if len(inv.args) >= 2 {
 		tmpl = strings.ToLower(inv.args[1])
 	}
-	if err := ensureMatch(keys(tmpls), &tmpl); err != nil {
-		return fmt.Errorf("%s: %s", file, err)
+	if tmpl, err = prefix(tmpl).matchAs(keys(tmpls), fmt.Sprintf("%s template", file)); err != nil {
+		return err
 	}
 
 	// Write to stdout if we're not connected to a terminal.
@@ -364,51 +364,122 @@ func (inv *invocation) doSort() error {
 	return log.save(inv.config())
 }
 
-func (inv *invocation) doDump() (err error) {
-	printers := map[string]map[string]func() error{
-		"config": {
-			"file": func() error {
-				return inv.config().write(inv.stdout)
-			},
-			"path": func() error {
-				inv.outln(inv.config().path)
-				return nil
-			},
-			"templates": func() error {
-				return configTemplates.dump(inv.stdout)
-			},
-		},
-		"changelog": {
-			"file": func() error {
+func (inv *invocation) doPrint() (err error) {
+	printers := printers{
+		"changelog": printers{
+			"file": printerFunc(func(inv *invocation, _ string) error {
 				cfg := inv.config()
 				log := inv.changelog()
 				return log.write(inv.stdout, cfg)
-			},
-			"path": func() error {
+			}),
+			"path": printerFunc(func(inv *invocation, _ string) error {
 				inv.outln(inv.changelog().path)
 				return nil
-			},
-			"templates": func() error {
-				return changelogTemplates.dump(inv.stdout)
-			},
+			}),
+			"templates": changelogTemplates,
+			"changes": printerFunc(func(inv *invocation, _ string) error {
+				var n int
+				for _, rel := range inv.changelog().releases {
+					n += rel.changeCount()
+				}
+				inv.outf("%d\n", n)
+				return nil
+			}),
+			"releases": printerFunc(func(inv *invocation, _ string) error {
+				inv.outf("%d\n", len(inv.changelog().releases))
+				return nil
+			}),
+		},
+		"config": printers{
+			"file": printerFunc(func(inv *invocation, _ string) error {
+				return inv.config().write(inv.stdout)
+			}),
+			"path": printerFunc(func(inv *invocation, _ string) error {
+				inv.outln(inv.config().path)
+				return nil
+			}),
+			"templates": configTemplates,
+			"labels": printerFunc(func(inv *invocation, _ string) error {
+				cfg := inv.config()
+				if cfg.Changes.Labels != nil {
+					for _, label := range cfg.Changes.Labels {
+						inv.outln(label)
+					}
+				}
+				return nil
+			}),
 		},
 	}
-	file := "changelog"
-	if len(inv.args) > 0 {
-		file = strings.ToLower(inv.args[0])
+	return printers.print(inv, strings.Join(inv.args, "."))
+}
+
+type printer interface {
+	print(*invocation, string) error
+}
+
+type printerFunc func(*invocation, string) error
+
+func (f printerFunc) print(inv *invocation, key string) error {
+	return f(inv, key)
+}
+
+type printers map[string]printer
+
+func (m printers) print(inv *invocation, key string) error {
+	// NOTE: key may be one of "prop", "", "*" or "prop.*", where the dot
+	// represents a parent.child relationship and the asterisk is a request
+	// for printing all children starting at that depth.
+	var next string
+	key = strings.TrimLeft(key, ".")
+	if idx := strings.Index(key, "."); idx >= 0 {
+		next, key = key[idx+1:], key[:idx]
 	}
-	if err := ensureMatch(keys(printers), &file); err != nil {
-		return err
+	if key == "" && next != "" {
+		key, next = next, ""
 	}
-	prop := "file"
-	if len(inv.args) > 1 {
-		prop = strings.ToLower(inv.args[1])
+	keys := keys(m)
+	switch key {
+	case "":
+		for _, key := range keys {
+			inv.outln(key)
+		}
+		return nil
+	case "*":
+		return m.flatten(inv, "")
+	default:
+		key, err := prefix(key).matchAs(keys, "key")
+		if err != nil {
+			return err
+		}
+		return m[key].print(inv, next)
 	}
-	if err := ensureMatch(keys(printers[file]), &prop); err != nil {
-		return fmt.Errorf("%s: %s", file, err)
+}
+
+func (m printers) flatten(inv *invocation, prefix string) error {
+	join := func(a, b string) string {
+		// a might be prefix and prefix can be empty.
+		if a == "" {
+			return b
+		}
+		return strings.Join([]string{a, b}, ".")
 	}
-	dump := printers[file][prop]
-	return dump()
+	for _, key := range keys(m) {
+		switch next := m[key].(type) {
+		case printers:
+			if err := next.flatten(inv, join(prefix, key)); err != nil {
+				return err
+			}
+		case templates:
+			for _, name := range keys(next) {
+				inv.outln(join(prefix, join(key, name)))
+			}
+		case printerFunc:
+			inv.outln(join(prefix, key))
+		default:
+			panicf("printers.flatten: unexpected printer type: %T", next)
+		}
+	}
+	return nil
 }
 
 // doList lists the version string for all releases (excluding the Unreleased
@@ -731,7 +802,8 @@ func (inv *invocation) doRelease() error {
 }
 
 func (inv *invocation) doReleaseBump(typ string) error {
-	if err := ensureMatch([]string{"major", "minor", "patch"}, &typ); err != nil {
+	typ, err := prefix(typ).matchAs([]string{"major", "minor", "patch"}, "version number")
+	if err != nil {
 		return err
 	}
 
@@ -874,20 +946,14 @@ func (inv *invocation) doChange() (err error) {
 		}
 	}()
 	switch {
-	case label == "" && len(allow) > 0:
-		return fmt.Errorf("unspecified change label. Must match one of: %s", strings.Join(allow, " | "))
 	case label == "" && len(allow) == 0:
 		return push(label, change)
 	default:
-		matches := matchPrefix(allow, label)
-		switch len(matches) {
-		case 0:
-			return fmt.Errorf("unknown change label: %s. Try `--dump conf` to see the list of available change labels.", label)
-		case 1:
-			return push(matches[0], change)
-		default:
-			return fmt.Errorf("ambiguous change label %s: conflicts with %s", label, strings.Join(matches, " | "))
+		label, err := prefix(label).matchAs(allow, "change label")
+		if err != nil {
+			return err
 		}
+		return push(label, change)
 	}
 }
 

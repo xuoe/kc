@@ -26,28 +26,21 @@ func TestInvoke(t *testing.T) {
 		stdout string // expected stdout
 	}{
 		{
-			name: "simple",
-			args: []string{"-p"},
-			create: files{
-				"CHANGELOG.md": "# Changelog\n",
-			},
-			expect: files{
-				"CHANGELOG.md": "# Changelog\n",
-			},
-			stdout: "# Changelog\n",
-		},
-		{
 			name:   "init config no template",
 			args:   []string{"-i", "conf"},
-			stderr: "Error: config: no default value. Try one of: github | gitlab\n",
+			stderr: "Error: no such config template: default, try: github | gitlab\n",
 		},
 		{
-			name:   "init github template",
+			name:   "init config ambiguous template",
+			args:   []string{"-i", "conf", "git"},
+			stderr: "Error: ambiguous config template match for \"git\": git*hub, git*lab\n",
+		},
+		{
+			name:   "init config github template",
 			args:   []string{"-i", "conf", "github"},
 			stdin:  "my/hub",
 			stderr: "Repository [user/repository]: ",
-			stdout: `
-			[links]
+			stdout: `[links]
 			  unreleased      = "https://github.com/my/hub/compare/{PREVIOUS}...HEAD"
 			  initial-release = "https://github.com/my/hub/releases/tag/{CURRENT}"
 			  release         = "https://github.com/my/hub/compare/{PREVIOUS}...{CURRENT}"
@@ -55,20 +48,7 @@ func TestInvoke(t *testing.T) {
 			`,
 		},
 		{
-			name:   "init gitlab template",
-			args:   []string{"-i", "conf", "gitlab"},
-			stdin:  "my/lab",
-			stderr: "Repository [user/repository]: ",
-			stdout: `
-			[links]
-			  unreleased      = "https://gitlab.com/my/lab/compare/{PREVIOUS}...master"
-			  initial-release = "https://gitlab.com/my/lab/-/tags/{CURRENT}"
-			  release         = "https://gitlab.com/my/lab/compare/{PREVIOUS}...{CURRENT}"
-			  mention         = "https://gitlab.com/{MENTION}"
-			`,
-		},
-		{
-			name:   "init default changelog",
+			name:   "init changelog default",
 			args:   []string{"-i", "ch"},
 			stdin:  "Testlog",
 			stderr: "Title [Changelog]: ",
@@ -78,7 +58,7 @@ func TestInvoke(t *testing.T) {
 			`,
 		},
 		{
-			name:   "init semver changelog",
+			name:   "init changelog semver",
 			args:   []string{"-i", "changel", "semver"},
 			stdin:  "Semver",
 			stderr: "Title [Changelog]: ",
@@ -90,8 +70,66 @@ func TestInvoke(t *testing.T) {
 			`,
 		},
 		{
-			name: "dump config",
-			args: []string{"-p", "conf"},
+			name:   "print top-level",
+			args:   []string{"-p"},
+			stdout: "changelog\nconfig\n",
+		},
+		{
+			name: "print all",
+			args: []string{"-p", "*"},
+			stdout: `changelog.changes
+			changelog.file
+			changelog.path
+			changelog.releases
+			changelog.templates.default
+			changelog.templates.kacl
+			changelog.templates.semver
+			config.file
+			config.labels
+			config.path
+			config.templates.github
+			config.templates.gitlab
+			`,
+		},
+		{
+			name: "print all child",
+			args: []string{"-p", "ch", "*"},
+			stdout: `changes
+			file
+			path
+			releases
+			templates.default
+			templates.kacl
+			templates.semver
+			`,
+		},
+		{
+			name: "print keys prefix spaces",
+			args: []string{"-p", "ch", "templ"},
+			stdout: `default
+			kacl
+			semver
+			`,
+		},
+		{
+			name: "print keys prefix dots",
+			args: []string{"-p", "ch.t"},
+			stdout: `default
+			kacl
+			semver
+			`,
+		},
+		{
+			name: "print value",
+			args: []string{"-p", "ch.t.default"},
+			stdout: `# {{ prompt "Title" "Changelog" }}
+
+			## Unreleased
+			`,
+		},
+		{
+			name: "print config",
+			args: []string{"-p", "conf", "file"},
 			stdout: `
 			[changes]
 			  labels = [
@@ -105,25 +143,23 @@ func TestInvoke(t *testing.T) {
 			`,
 		},
 		{
-			name: "dump builtin config path",
-			args: []string{"-p", "conf", "path"},
-			stdout: `<builtin>
-			`,
+			name:   "print config path builtin",
+			args:   []string{"-p", "conf", "path"},
+			stdout: "<builtin>\n",
 		},
 		{
-			name: "dump default config path",
+			name: "print config path default",
 			create: files{
 				".kcrc": `
 				[changes]
 				  labels = []
 				`,
 			},
-			args: []string{"-p", "conf", "path"},
-			stdout: `.kcrc
-			`,
+			args:   []string{"-p", "conf", "path"},
+			stdout: ".kcrc\n",
 		},
 		{
-			name: "dump custom config path",
+			name: "print config path custom",
 			create: files{
 				"my-conf-file": `
 				[changes]
@@ -135,14 +171,14 @@ func TestInvoke(t *testing.T) {
 			`,
 		},
 		{
-			name: "dump changelog",
+			name: "print changelog",
 			create: files{
 				"CHANGELOG.md": `# Changelog
 				## Unreleased
 				## 0.1.0
 				`,
 			},
-			args: []string{"-p", "changelog"},
+			args: []string{"-p", "ch", "f"},
 			stdout: `# Changelog
 
 			## Unreleased

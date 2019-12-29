@@ -950,16 +950,30 @@ func (p placeholder) in(str string) bool {
 
 type templates map[string]string
 
+func (m templates) print(inv *invocation, key string) error {
+	keys := keys(m)
+	switch key {
+	case "", "*":
+		for _, key := range keys {
+			inv.outln(key)
+		}
+		return nil
+	}
+	name, err := prefix(key).matchAs(keys, "template")
+	if err != nil {
+		return err
+	}
+	inv.outln(strings.TrimSpace(m[name]))
+	return nil
+}
+
 func (m templates) render(w io.Writer, name string, funcs template.FuncMap) error {
 	tmpl, ok := m[name]
 	if !ok {
-		return fmt.Errorf("%s: no such template", name)
+		return fmt.Errorf("no such template: %s", name)
 	}
-
-	// Reduce trailing whitespace to a single newline.
-	tmpl = strings.TrimRightFunc(tmpl, unicode.IsSpace)
+	tmpl = strings.TrimSpace(tmpl)
 	tmpl += "\n"
-
 	t := template.New(name).Funcs(funcs)
 	t, err := t.Parse(tmpl)
 	if err != nil {
@@ -968,41 +982,15 @@ func (m templates) render(w io.Writer, name string, funcs template.FuncMap) erro
 	return t.Execute(w, nil)
 }
 
-// dump dumps the raw templates specified by names to w. If names is nil, all
-// templates are dumped.
-func (m templates) dump(w io.Writer, names ...string) error {
-	b := new(strings.Builder)
-	if len(names) == 0 {
-		names = keys(m)
-	}
-	for _, name := range names {
-		tmpl, ok := m[name]
-		if !ok {
-			// Prefer skipping unknown templates over erring out.
-			continue
-		}
-		b.Reset()
-		sep := strings.Repeat("-", len(name)+4)
-		fmt.Fprintln(b, sep)
-		fmt.Fprintf(b, "| %s |\n", name)
-		fmt.Fprintln(b, sep)
-		fmt.Fprintln(b, tmpl)
-		if _, err := io.WriteString(w, b.String()); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 var configTemplates = templates{
-	"github": `{{ $repository := prompt "Repository" "user/repository" }}
+	"github": `{{ $repository := prompt "Repository" "user/repository" -}}
 [links]
   unreleased      = "https://github.com/{{ $repository }}/compare/{PREVIOUS}...HEAD"
   initial-release = "https://github.com/{{ $repository }}/releases/tag/{CURRENT}"
   release         = "https://github.com/{{ $repository }}/compare/{PREVIOUS}...{CURRENT}"
   mention         = "https://github.com/{MENTION}"`,
 
-	"gitlab": `{{ $repository := prompt "Repository" "user/repository" }}
+	"gitlab": `{{ $repository := prompt "Repository" "user/repository" -}}
 [links]
   unreleased      = "https://gitlab.com/{{ $repository }}/compare/{PREVIOUS}...master"
   initial-release = "https://gitlab.com/{{ $repository }}/-/tags/{CURRENT}"

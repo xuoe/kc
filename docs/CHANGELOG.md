@@ -12,6 +12,11 @@
 ### Changed
 
 - Changelog titles are now required.
+- Renamed `--dump` to `--print`, which can now print nested kc properties. See
+  `--print '*'` for a list of all the possible values. Each dot-separated section
+  may be specified as a case-insensitive prefix and the dot characters may be
+  replaced with a space character; an asterisk may be used to print the property
+  names at that depth level and below.
 
 ### Fixed
 
