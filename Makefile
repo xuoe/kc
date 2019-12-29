@@ -5,9 +5,9 @@ OS            = $(shell go env GOOS)
 ARCHLIST     ?= x86 x64
 OSLIST       ?= linux openbsd freebsd netbsd macos windows
 PLATFORMS    := $(foreach os,$(OSLIST),$(foreach arch,$(ARCHLIST),$(os)-$(arch)))
-BRANCH       := $(shell git rev-parse --abbrev-ref HEAD)
-COMMIT       := $(shell git rev-parse --short HEAD)
-TODAY        := $(shell date '+%Y-%m-%d')
+BRANCH        = $(shell git rev-parse --abbrev-ref HEAD)
+COMMIT        = $(shell git rev-parse --short HEAD)
+TODAY         = $(shell date '+%Y-%m-%d')
 PREFIX       ?= /usr/local
 BINDIR       := $(PREFIX)/bin
 MANDIR       := $(PREFIX)/share/man
@@ -16,13 +16,13 @@ MANADOC      := docs/MANUAL.adoc
 LICENSE      := docs/LICENSE.md
 CHANGELOG    := docs/CHANGELOG.md
 DOCS         := $(MANADOC) $(CHANGELOG) $(LICENSE)
-BASH         := $(shell which bash)
+BASH          = $(shell which bash)
 STATICCHECK   = $(shell go env GOPATH)/bin/staticcheck
 
 ifdef CI
-VERSION = ci
+VERSION := ci
 else
-VERSION = $(shell ./$(BIN) --list | head -1)
+VERSION = $(shell perl -n -e 'if (/\#\#\s\[(.+)\]/) { print $$1; exit }' $(CHANGELOG))
 endif
 
 empty =
@@ -46,14 +46,16 @@ check:
 	$(STATICCHECK) -checks $(checks) ./...
 
 .PHONY: install
-install: $(BIN) $(MANROFF)
+install: $(BIN) $(MANROFF).gz
 	install -Dm755 $(BIN) -t $(DESTDIR)$(BINDIR)
-	install -Dm644 $(MANROFF) $(DESTDIR)$(MANDIR)/$(BIN).1
+	install -Dm644 $(MANROFF).gz $(DESTDIR)$(MANDIR)/$(BIN).1.gz
 
 $(BIN): build/$(OS)-$(ARCH)
 	cp $< $(call PLATFORM_BIN,$<)
 
-$(MANROFF): $(MANADOC)
+$(MANROFF).gz: $(MANROFF); gzip -c $< > $@
+
+$(MANROFF): $(MANADOC) $(CHANGELOG)
 	perl -0p \
 		-e 's/``(.+?)``/_\1_/msg;' \
 		-e 's/`(.+?)`/*\1*/msg;' \
@@ -69,14 +71,15 @@ $(MANROFF): $(MANADOC)
 
 .PHONY: release
 release: private SHELL := $(BASH)
-release: pristine clean check test dist $(BIN)
-	@./$(BIN) --release $(VERSION) > /dev/null
+release: system-install pristine clean check test dist
+	@$(BIN) --release $(VERSION)
 	@echo '-----'
 	@$(call release-message)
 	@echo '-----'
 	@$(call confirm,Push $(VERSION)?)
 	git checkout -b release/$(VERSION)
-	git add $(CHANGELOG)
+	$(MAKE) $(MANROFF)
+	git add $(CHANGELOG) $(MANROFF)
 	git commit -m "release: $(VERSION)"
 	git tag --annotate -m "release $(VERSION)" $(VERSION)
 	git push --follow-tags origin release/$(VERSION)
@@ -93,7 +96,7 @@ release: pristine clean check test dist $(BIN)
 	git push --delete origin release/$(VERSION)
 	git branch --delete --force release/$(VERSION)
 	git push origin :
-	hub release edit --draft=false $(VERSION)
+	hub release edit --draft=false --message "" $(VERSION)
 	@echo publish $(VERSION): OK
 
 
@@ -118,14 +121,11 @@ dist/$(BIN)-$(VERSION)-%.tar.gz: build/% $(DOCS)
 		sha256sum --check --strict $(@F); \
 	}
 
-build/%: SHELL := $(BASH)
-build/%: ldflags := -X main.buildDate=$(TODAY)
-build/%: ldflags += -X main.buildCommit=$(COMMIT)
-build/%: ldflags += -X main.buildVersion=$(VERSION)
-build/%: os = $(shell $(call canonic_os,$(firstword $(call split,$(@F)))))
-build/%: arch = $(shell $(call canonic_arch,$(lastword $(call split,$(@F)))))
-build/%: *.go | build.dir
-	GOOS=$(os) GOARCH=$(arch) go build -ldflags "$(ldflags)" -o $@
+build/%: ldflags  = -X main.Version=$(VERSION)
+build/%: SHELL   := $(BASH)
+build/%: GOOS     = $(shell $(call canonic_os,$(firstword $(call split,$(@F)))))
+build/%: GOARCH   = $(shell $(call canonic_arch,$(lastword $(call split,$(@F)))))
+build/%: *.go | build.dir; go build -ldflags "$(ldflags)" -o $@
 
 .PHONY: pristine
 pristine:
@@ -134,11 +134,18 @@ pristine:
 		exit 1; \
 	}
 
+PHONY: system-install
+system-install:
+	@command -v $(BIN) || { \
+		echo '$(BIN) is not installed on this system. Aborting...'; \
+		exit 1; \
+	}
+
 .PHONY: clean
 clean:
 	@rm -rf \
 		$(BIN) \
-		$(MANROFF) \
+		$(MANROFF).gz \
 		dist \
 		build
 
@@ -171,5 +178,5 @@ fi
 endef
 
 define release-message
-{ echo $(VERSION); echo; ./$(BIN) --show $(VERSION) | tail -n +3; }
+{ echo $(VERSION); echo; $(BIN) --show $(VERSION) | tail -n +3; }
 endef

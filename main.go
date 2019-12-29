@@ -20,12 +20,8 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-var (
-	// These are populated at build time via -ldflags.
-	buildCommit  string
-	buildDate    string
-	buildVersion string
-)
+// Version is set to the actual version string at build time via -ldflags.
+var Version = "dev"
 
 func main() {
 	inv := invocation{
@@ -247,7 +243,7 @@ func panicf(fs string, args ...interface{}) {
 }
 
 func (inv *invocation) doHelp() error {
-	tmpl := fmt.Sprintf("kc %s\n", buildVersion) + `
+	tmpl := fmt.Sprintf("kc %s\n", Version) + `
 Usage:
     kc [OPTIONS] <COMMAND> [ARGS]...
     kc [LABEL] [TEXT]...
@@ -286,7 +282,7 @@ Flags:
 }
 
 func (inv *invocation) doVersion() error {
-	inv.outf("%s (%s, %s)\n", buildVersion, buildCommit, buildDate)
+	inv.outln(Version)
 	return nil
 }
 

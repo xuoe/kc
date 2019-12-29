@@ -35,3 +35,6 @@ into `<dir><prefix>`, such that `find <dir> -name 'kc*'` should print:
   <dir><prefix>/bin/kc
   <dir><prefix>/share/man/man1/kc.1.gz
   ```
+
+If you do not want `go get` to pull dependencies into your `$GOPATH`, pass
+a different value to `make install`.

@@ -1,0 +1,467 @@
+'\" t
+.\"     Title: kc
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 2.0.10
+.\"      Date: 2019-12-29
+.\"    Manual: kc Manual
+.\"    Source: kc Unreleased
+.\"  Language: English
+.\"
+.TH "KC" "1" "2019-12-29" "kc Unreleased" "kc Manual"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.ss \n[.ss] 0
+.nh
+.ad l
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
+.SH "NAME"
+kc \- a tool for managing changelogs
+.SH "SYNOPSIS"
+.sp
+.sp
+.nf
+\fBkc\fP [\fIOPTION\fP]... \fICOMMAND\fP [ARGS]...
+\fBkc\fP [\fIOPTION\fP]... [\fILABEL\fP] [\fITEXT\fP]...
+.fi
+.br
+.SH "DESCRIPTION"
+.sp
+\fBkc\fP provides an interface for managing changelog files based on the
+.URL "https://keepachangelog.com/en/1.0.0/" "\(dqKeep a Changelog\(dq format" "."
+.sp
+In addition to appending changes to a changelog, \fBkc\fP can create, edit, merge
+and delete releases. Depending on how it is configured, \fBkc\fP can generate links
+for @\-style mentions and release links that point to the changes introduced by
+each release.
+.sp
+As specified in the SYNOPSIS section, there are two modes of invoking \fBkc\fP:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+In the first form, \fBkc\fP executes a command on the current changelog file (see
+FILES and OPTIONS). The commands are regular flags and are listed under
+the COMMANDS section.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+In the second form, \fBkc\fP appends a change under the \fIUnreleased\fP section,
+which is auto\-created if non\-existent. \fILABEL\fP specifies the label or
+category under which the change text must be included. \fITEXT\fP is the actual
+change text, which, if omitted, instructs \fBkc\fP to open an editor (see
+ENVIRONMENT) to capture the change. If \fBkc\fP is configured to ignore change
+labels (see CONFIGURATION), \fILABEL\fP becomes part of \fITEXT\fP.
+.RE
+.sp
+\fBkc\fP operates by stashing changes in an \fIUnreleased\fP section. When a new
+release is created, the stashed changes are moved into it and the \fIUnreleased\fP
+section is removed. At this point, adding a new change restarts the cycle.
+.sp
+Change text may span multiple lines and may be indented. However, \fBkc\fP discards
+any form of indentation and joins multiple lines by a double\-space character
+sequence.
+.sp
+Releases (or the \fIUnreleased\fP section) may start with an introductory text,
+which can contain any text as long as it does not start with a release
+heading (\fB##\fP), change label heading (\fB###\fP), or change text (\fB\-\fP ...).
+In those cases, prepending a space character to the text instructs \fBkc\fP to
+treat the special characters as plain text. Note that, besides manually editing
+the changelog file, the only way of adding a release note is by invoking
+\fB\-\-edit\fP.
+.SH "OPTIONS"
+.sp
+\fB\-c, \-\-changelog\fP \fIPATH\fP
+.RS 4
+Load the changelog file found at \fIPATH\fP instead of searching for a changelog
+up the directory tree.
+.RE
+.sp
+\fB\-C, \-\-config\fP \fIPATH\fP
+.RS 4
+Load the configuration file found at \fIPATH\fP instead of searching for a configuration
+file up the directory tree.
+.RE
+.SH "COMMANDS"
+.sp
+Commands are regular flags, except that only one command may be specified at
+a time and it should always follow any of the options defined in the
+OPTIONS section.
+.sp
+Most command arguments may be specified as case\-insensitive prefixes.
+.sp
+\fB\-i, \-\-init\fP [\fIFILE\fP] [\fITEMPLATE\fP]
+.RS 4
+Initialize a changelog or configuration file using \fITEMPLATE\fP as the starting point.
+\fIFILE\fP may be one of \fBconfig\fP or \fBchangelog\fP (default).
+.sp
+If \fITEMPLATE\fP is omitted, \fBkc\fP attempts to use the \fBdefault\fP template for
+\fIFILE\fP.
+.sp
+If \fIFILE\fP is \fBchangelog\fP and the option \fB\-\-changelog\fP is provided, a changelog
+file is initialized at the specified path. The same applies for configuration
+files and \fB\-\-config\fP.
+.sp
+Some templates may prompt the user for additional details (e.g., changelog title).
+To see the list of supported templates for \fIFILE\fP, issue \fBkc \-\-print
+FILE.templates\fP.
+.RE
+.sp
+\fB\-p, \-\-print\fP [\fIPROP\fP]...
+.RS 4
+Print a kc property.
+.sp
+\fIPROP\fP keys may be separated by a space or dot character, i.e.,
+\fBchangelog path\fP and \fBchangelog.path\fP are equivalent. If a key is
+specified as an asterisk (\fB*\fP), the entire key set at that depth level and
+below is printed, which differs from the empty string key where only the keys
+for the current property set are printed.
+.sp
+\fIPROP\fP keys may be specified as prefixes, e.g., \fBch f\fP is equivalent to
+\fBchangelog file\fP.
+.sp
+To see the entire property set, issue \fBkc \-\-print \(aq\fP\(aq*; to see the top\-level
+property set, drop the asterisk.
+.RE
+.sp
+\fB\-s, \-\-show\fP [\fIPATTERN\fP]
+.RS 4
+Show releases that match \fIPATTERN\fP, or show the \fIUnreleased\fP section if
+\fIPATTERN\fP is omitted.
+.sp
+\fIPATTERN\fP is a prefix and/or a glob pattern that is matched against release
+version strings. Other commands that take a \fIPATTERN\fP expect the same format.
+.RE
+.sp
+\fB\-d, \-\-delete\fP [\fIPATTERN\fP]
+.RS 4
+Delete releases that match \fIPATTERN\fP, or delete the \fIUnreleased\fP section if
+\fIPATTERN\fP is omitted.
+.RE
+.sp
+\fB\-l, \-\-list\fP [\fIPATTERN\fP]
+.RS 4
+List release version strings that match \fIPATTERN\fP, or list all of them if
+\fIPATTERN\fP is omitted.
+.RE
+.sp
+\fB\-L, \-\-list\-all\fP [\fIPATTERN\fP]
+.RS 4
+Like \fB\-\-list\fP, but also include the \fIUnreleased\fP section and the number of
+changes per release/section.
+.RE
+.sp
+\fB\-e, \-\-edit\fP [\fIPATTERN\fP]
+.RS 4
+Edit releases that match \fIPATTERN\fP, or edit the \fIUnreleased\fP section if
+\fIPATTERN\fP is omitted. Editing is done by opening a text editor with the content
+(version, note and changes) of each matching release, one by one.
+.sp
+If the entire release body is deleted, saving the changes and exiting the
+editor deletes the release.
+.RE
+.sp
+\fB\-r, \-\-release\fP [\fIVERSION\fP]
+.RS 4
+Release changes stashed under the \fIUnreleased\fP section.
+.sp
+\fIVERSION\fP may be one of:
+.sp
+
+.RS 4
+.sp
+\fBmajor\fP
+.RS 4
+Increment the major \fI(#._._)\fP number.
+.RE
+.sp
+\fBminor\fP
+.RS 4
+Increment the minor \fI(_.#._)\fP number.
+.RE
+.sp
+\fBpatch\fP
+.RS 4
+Increment the patch \fI(_._.#)\fP number (default).
+.RE
+.sp
+\fIstring\fP
+.RS 4
+A version string that adheres to Semantic Versioning.
+If \fIVERSION\fP matches an existing release, \fBkc\fP attempts to merge the
+changes from the \fIUnreleased\fP section with the release specified by
+\fIVERSION\fP.
+.RE
+.RE
+.RE
+.sp
+\fB\-R, \-\-unrelease\fP
+.RS 4
+Unrelease the changes introduced by the last release. Unreleasing consists of
+merging the last release with the \fIUnreleased\fP section. If no \fIUnreleased\fP
+section exists, the last release takes its place. In all cases, the link and
+date of the last release are discarded.
+.sp
+Release notes are joined by an empty line.
+.RE
+.sp
+\fB\-t, \-\-sort\fP
+.RS 4
+Sort releases according to semver.
+.RE
+.SH "CONFIGURATION"
+.sp
+\fBkc\fP may be configured through a \c
+.URL "https://github.com/toml\-lang/toml#readme" "TOML"
+configuration file (see FILES and EXAMPLES). The file is composed of
+two tables: \fBchanges\fP and \fBlinks\fP.
+.sp
+Use \fBkc \-\-print config\fP to inspect configuration properties. For example, \fBkc
+\-\-print config file\fP prints the raw configuration file, while \fBkc \-\-print
+config path\fP prints the configuration file path.
+.SS "\fBchanges\fP"
+.sp
+A single\-key table, where the key is \fBlabels\fP: an array that specifies which
+change labels may be used when introducing a new change. If the array is
+non\-empty, \fBkc\fP allows only changes whose labels match at most one of the array
+members. Otherwise, if the array is empty (not unset, just empty), \fBkc\fP ignores
+change labels and treats them as change text instead. By default,
+\fBchanges.labels\fP is set to an array comprising of: \fBAdded\fP, \fBRemoved\fP,
+\fBChanged\fP, \fBSecurity\fP, \fBFixed\fP, \fBDeprecated\fP. Note that, as mentioned in the
+preamble of the COMMANDS section, when introducing a change, the label may
+be specified as a case\-insensitive prefix, i.e., a label of \fBa\fP, \fBadd\fP or \fBADD\fP
+is equivalent to \fBAdded\fP.
+.SS "\fBlinks\fP"
+.sp
+A multi\-key table, where each key specifies the format for a link type. If
+a link type does not have a format defined, no links are generated for that
+particular type.
+.sp
+
+.RS 4
+.sp
+\fBunreleased\fP
+.RS 4
+The format for the \fIUnreleased\fP section link.
+\:
+.br
+Placeholders: \fB{PREVIOUS}\fP.
+.sp
+The link is generated when the template contains \fB{PREVIOUS}\fP and a previous
+release exists. If the template is non\-empty and does not contain \fB{PREVIOUS}\fP,
+it is always generated.
+.RE
+.sp
+\fBinitial\-release\fP
+.RS 4
+The format for the initial release (the bottom\-most release) link.
+\:
+.br
+Placeholders: \fB{CURRENT}\fP.
+.RE
+.sp
+\fBrelease\fP
+.RS 4
+The format for intermediary release (any non\-initial release) links.
+\:
+.br
+Placeholders: \fB{CURRENT}\fP, \fB{PREVIOUS}\fP.
+.RE
+.sp
+\fBmention\fP
+.RS 4
+The format for @\-style mention links.
+\:
+.br
+Placeholders: \fB{MENTION}\fP.
+.RE
+.RE
+.SS "Placeholders"
+.sp
+
+.RS 4
+.sp
+\fB{CURRENT}\fP
+.RS 4
+The version string for the current release.
+.RE
+.sp
+\fB{PREVIOUS}\fP
+.RS 4
+The version string for the previous release.
+.RE
+.sp
+\fB{MENTION}\fP
+.RS 4
+The part after the at symbol in an @\-style mention.
+.RE
+.RE
+.SH "ENVIRONMENT"
+.sp
+\fBkc\fP consults the \fBVISUAL\fP and \fBEDITOR\fP environment variables to determine
+which text editor to use when editing a release. If neither is set, \fBkc\fP
+prompts the user to specify an executable name instead.
+.SH "FILES"
+.sp
+\fB.kcrc\fP
+.RS 4
+The default configuration file. At runtime, \fBkc\fP attempts to load it from
+the working directory. If no configuration file exists, \fBkc\fP walks up the
+directory tree until a configuration file is found or the directory tree is
+exhausted. (The user\(cqs configuration directory is not consulted.)
+.sp
+\fBkc\fP always loads a default internal configuration prior to loading
+a user\-specified configuration file.
+.RE
+.sp
+\fBCHANGELOG.md\fP
+.RS 4
+The default changelog file. The loading process is the same as for the
+configuration file.
+.sp
+The filename is case\-insensitive and may also be one of: \fBRELEASE.md\fP,
+\fBRELEASES.md\fP, \fBRELEASE\-NOTES.md\fP, \fBRELEASE_NOTES.md\fP, \fBRELEASENOTES.md\fP, or
+\fBNEWS.md\fP.
+.RE
+.SH "NOTES"
+.sp
+\fBkc\fP does not require nor use \fBgit\fP.
+.SH "EXAMPLES"
+.sp
+Initialize and inspect a changelog file:
+.sp
+.if n .RS 4
+.nf
+$ kc \-\-init
+Title [Changelog]: <RETURN>
+$ kc \-\-print changelog file
+# Changelog
+
+## Unreleased
+$ kc \-\-print changelog path
+CHANGELOG.md
+.fi
+.if n .RE
+.sp
+Initialize and inspect a configuration file:
+.sp
+.if n .RS 4
+.nf
+$ kc \-\-init conf github
+Repository [user/repository]: xuoe/kc<RETURN>
+$ kc \-\-print conf path
+\&.kcrc
+$ kc \-\-print conf file
+[links]
+  initial\-release = "https://github.com/xuoe/kc/releases/tag/{CURRENT}"
+  mention = "https://github.com/{MENTION}"
+  release = "https://github.com/xuoe/kc/compare/{PREVIOUS}...{CURRENT}"
+  unreleased = "https://github.com/xuoe/kc/compare/{PREVIOUS}...HEAD"
+
+[changes]
+  labels = [
+    "Added",
+    "Removed",
+    "Changed",
+    "Security",
+    "Fixed",
+    "Deprecated",
+  ]
+.fi
+.if n .RE
+.sp
+Create a changelog, append a change, cut a release:
+.sp
+.if n .RS 4
+.nf
+$ kc \-\-init
+Title [Changelog]: <RETURN>
+$ kc a This is an example change.
+$ kc \-\-print changelog file
+# Changelog
+
+## Unreleased
+
+### Added
+
+\- This is an example change.
+$ kc \-\-release min
+0.1.0
+$ kc \-\-print ch.f # shorthand for "changelog file"
+# Changelog
+
+## 0.1.0 \- 2019\-12\-20
+
+### Added
+
+\- This is an example change.
+$ kc \-\-list
+0.1.0
+.fi
+.if n .RE
+.sp
+Delete releases:
+.sp
+.if n .RS 4
+.nf
+$ kc \-\-list
+0.3.0
+0.2.2
+0.2.1
+0.2.0
+0.1.1
+0.1.0
+$ kc \-\-delete 0.1
+Releases [2/6]:
+
+  0.1.1
+  0.1.0
+
+Press [Return] to delete the above or apply a different pattern: <RETURN>
+Are you sure you want to delete 2 releases? [yN] y
+$ kc \-\-list
+0.3.0
+0.2.2
+0.2.1
+0.2.0
+.fi
+.if n .RE
+.sp
+Print the path to the active changelog:
+.sp
+.if n .RS 4
+.nf
+$ touch CHANGELOG.md
+$ mkdir \-p a/b/c; cd a/b/c
+$ kc \-\-print changelog path
+\&../../../CHANGELOG.md
+.fi
+.if n .RE
+.SH "LICENSE"
+.sp
+\fBkc\fP is licensed under the \c
+.URL "./LICENSE.md" "MIT license" "."
