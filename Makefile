@@ -76,7 +76,9 @@ release: system-install pristine clean check test dist
 	@echo '-----'
 	@$(call release-message)
 	@echo '-----'
-	@$(call confirm,Push $(VERSION)?)
+	@$(call confirm,Push $(VERSION)?,\
+		git checkout $(CHANGELOG); \
+		echo 'release $(VERSION) cancelled')
 	git checkout -b release/$(VERSION)
 	$(MAKE) $(MANROFF)
 	git add $(CHANGELOG) $(MANROFF)
@@ -90,7 +92,13 @@ release: system-install pristine clean check test dist
 		$$(echo dist/* | sed 's,dist/,--attach &,g') \
 		--commitish release/$(VERSION) \
 		$(VERSION)
-	@$(call confirm,Publish $(VERSION)?)
+	@$(call confirm,Publish $(VERSION)?,\
+		git checkout -; \
+		git push --delete origin $(VERSION) release/$(VERSION); \
+		git branch --delete --force release/$(VERISON); \
+		git tag --delete $(VERSION); \
+		hub release delete $(VERSION); \
+		echo 'release $(VERSION) cancelled; back on $(BRANCH)')
 	git checkout next && git merge release/$(VERSION)
 	git checkout master && git merge next
 	git push --delete origin release/$(VERSION)
@@ -170,11 +178,17 @@ define canonic_os
 endef
 
 define confirm
-read -s -n 1 -p "$(1) [yN] " yn && \
+$(call require-bash,confirm); \
+read -s -n 1 -p "$(1) [yN] " yn; echo $$yn; \
 if [[ $${yn,,} != y ]]; then \
-	echo 'Exiting by choice...'; \
+	$(if $(2),$(strip $(2));) \
+	echo 'Aborting...'; \
 	exit 1; \
 fi
+endef
+
+define require-bash
+test $(SHELL) = $(BASH) || { echo "'$(1)' requires bash"; exit 1; }
 endef
 
 define release-message
