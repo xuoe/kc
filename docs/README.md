@@ -27,7 +27,7 @@ __kc__ may be installed by
 - [downloading a release package](https://github.com/xuoe/kc/releases/latest)
   for your platform, unpacking it and placing the pre-compiled binary in your
   `$PATH`, or
-- issuing `go get -u github.com/xuoe/kc`, or
+- issuing `go install github.com/xuoe/kc@latest`, or
 - [building it from source](./BUILD.md), which has the benefit of also
   installing [the manual page](./MANUAL.adoc).
 
