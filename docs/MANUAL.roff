@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: kc
 .\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2019-12-29
+.\" Generator: Asciidoctor 2.0.15
+.\"      Date: 2022-11-18
 .\"    Manual: kc Manual
-.\"    Source: kc 0.2.1
+.\"    Source: kc 0.2.2
 .\"  Language: English
 .\"
-.TH "KC" "1" "2019-12-29" "kc 0.2.1" "kc Manual"
+.TH "KC" "1" "2022-11-18" "kc 0.2.2" "kc Manual"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -30,7 +30,6 @@
 .SH "NAME"
 kc \- a tool for managing changelogs
 .SH "SYNOPSIS"
-.sp
 .sp
 .nf
 \fBkc\fP [\fIOPTION\fP]... \fICOMMAND\fP [ARGS]...
@@ -356,6 +355,7 @@ Initialize and inspect a changelog file:
 .sp
 .if n .RS 4
 .nf
+.fam C
 $ kc \-\-init
 Title [Changelog]: <RETURN>
 $ kc \-\-print changelog file
@@ -364,6 +364,7 @@ $ kc \-\-print changelog file
 ## Unreleased
 $ kc \-\-print changelog path
 CHANGELOG.md
+.fam
 .fi
 .if n .RE
 .sp
@@ -371,6 +372,7 @@ Initialize and inspect a configuration file:
 .sp
 .if n .RS 4
 .nf
+.fam C
 $ kc \-\-init conf github
 Repository [user/repository]: xuoe/kc<RETURN>
 $ kc \-\-print conf path
@@ -391,6 +393,7 @@ $ kc \-\-print conf file
     "Fixed",
     "Deprecated",
   ]
+.fam
 .fi
 .if n .RE
 .sp
@@ -398,6 +401,7 @@ Create a changelog, append a change, cut a release:
 .sp
 .if n .RS 4
 .nf
+.fam C
 $ kc \-\-init
 Title [Changelog]: <RETURN>
 $ kc a This is an example change.
@@ -421,6 +425,7 @@ $ kc \-\-print ch.f # shorthand for "changelog file"
 \- This is an example change.
 $ kc \-\-list
 0.1.0
+.fam
 .fi
 .if n .RE
 .sp
@@ -428,6 +433,7 @@ Delete releases:
 .sp
 .if n .RS 4
 .nf
+.fam C
 $ kc \-\-list
 0.3.0
 0.2.2
@@ -448,6 +454,7 @@ $ kc \-\-list
 0.2.2
 0.2.1
 0.2.0
+.fam
 .fi
 .if n .RE
 .sp
@@ -455,10 +462,12 @@ Print the path to the active changelog:
 .sp
 .if n .RS 4
 .nf
+.fam C
 $ touch CHANGELOG.md
 $ mkdir \-p a/b/c; cd a/b/c
 $ kc \-\-print changelog path
 \&../../../CHANGELOG.md
+.fam
 .fi
 .if n .RE
 .SH "LICENSE"

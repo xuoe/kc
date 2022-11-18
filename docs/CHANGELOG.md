@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.2] - 2022-11-18
 
 ### Fixed
 
@@ -42,7 +42,7 @@ This is a bugfix release that ensures [building kc from source](./BUILD.md) work
 
 Initial release.
 
-[Unreleased]: https://github.com/xuoe/kc/compare/0.2.1...HEAD
+[0.2.2]: https://github.com/xuoe/kc/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/xuoe/kc/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/xuoe/kc/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/xuoe/kc/releases/tag/0.1.0
