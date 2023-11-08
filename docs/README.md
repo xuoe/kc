@@ -1,4 +1,4 @@
-[![CI Status](https://img.shields.io/github/workflow/status/xuoe/kc/CI?style=flat-square)](https://github.com/xuoe/kc/actions?query=workflow:CI)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/xuoe/kc/ci.yml?style=flat-square)](https://github.com/xuoe/kc/actions?query=workflow:CI)
 [![Latest Release](https://img.shields.io/github/v/release/xuoe/kc?style=flat-square)](https://github.com/xuoe/kc/releases/latest)
 [![Changelog](https://img.shields.io/badge/changelog-latest-blue?style=flat-square)](CHANGELOG.md)
 
